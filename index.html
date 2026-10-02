@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Llama.cpp Interactive Log Player</title>
+<title>Llama.cpp Canonical Engine Monitor — Replay</title>
 <style>
 :root{
   --bg:#06090e;--panel:#0d131d;--panel2:#090e15;--border:#1a2436;--text:#f1f5f9;--dim:#64748b;
@@ -14,60 +14,197 @@ html,body{height:100%;margin:0;padding:12px;font-family:-apple-system,BlinkMacSy
 .top-bar{flex-shrink:0}
 .badge{padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:bold}.badge-on{background:#15803d;color:#fff}.badge-off{background:#b91c1c;color:#fff}.badge-warn{background:#dc2626;color:#fff;animation:blink 1s infinite}@keyframes blink{50%{opacity:.5}}
 .tag-pill{padding:2px 6px;border-radius:4px;font-weight:bold;font-size:10.5px}
+.flow-diagram{margin:0;padding:0;background:transparent;font-size:10px;line-height:1.3}
+.flow-diagram svg{max-width:100%;height:auto}
+.flow-wrap{cursor:zoom-in}
+.flow-wrap:hover{outline:1px solid var(--border);outline-offset:2px;border-radius:6px}
+.flow-overlay{position:fixed;inset:0;z-index:1000;background:rgba(6,9,14,.9);display:none;flex-direction:column}
+.flow-overlay.open{display:flex}
+.flow-viewer-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
+.flow-viewer-title{font-size:11px;font-weight:700;color:var(--dim);letter-spacing:0.5px;margin-right:auto}
+.flow-viewer-toolbar button{background:var(--panel2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:12px;font-weight:700;padding:3px 10px;border-radius:5px;cursor:pointer}
+.flow-viewer-toolbar button:hover{border-color:var(--input);color:var(--input)}
+#fv-zoom-val{font-size:11px;color:var(--dim);min-width:44px;text-align:center}
+.flow-viewer-canvas{flex:1;position:relative;overflow:hidden;cursor:grab}
+.flow-viewer-canvas.dragging{cursor:grabbing}
+.flow-viewer-canvas svg{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform}
 .main-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.15fr 1fr; gap: 12px; }
 .left-col { display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; }
 .right-col { display: flex; flex-direction: column; min-height: 0; height: 100%; }
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 9px; padding: 12px; position: relative; }
 .card-history { flex: 1; min-height: 120px; display: flex; flex-direction: column; }
 .card-log { flex: 1; min-height: 0; height: 100%; display: flex; flex-direction: column; }
+.main-layout.log-collapsed { grid-template-columns: 1fr 36px; }
+.main-layout.log-collapsed .card-log { padding: 4px; }
+.main-layout.log-collapsed .card-log > *:not(.card-log-collapsed-bar) { display: none; }
+.card-log-collapsed-bar { display: none; flex-direction: column; align-items: center; gap: 8px; padding: 8px 0; cursor: pointer; }
+.main-layout.log-collapsed .card-log-collapsed-bar { display: flex; }
+.card-log-collapsed-bar .log-bar-label { writing-mode: vertical-rl; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: var(--dim); }
+.card-log-collapsed-bar .log-bar-badge { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid #64748b; border-radius: 8px; font-size: 10px; padding: 2px 5px; font-variant-numeric: tabular-nums; }
 .donut-layout{display:flex;align-items:center;gap:18px}.donut-box{position:relative;width:340px;height:340px;flex-shrink:0}.donut-box canvas{width:340px;height:340px;display:block}
 .ring-tooltip{position:absolute;z-index:10;pointer-events:none;display:none;background:#0d1522;border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11px;line-height:1.5;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)}
-.donut-core { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 50%; pointer-events: none; }
-.phase-badge{font-size:12px;font-weight:bold;padding:3px 14px;border-radius:20px;background:#151e2b;color:var(--text);border:1px solid var(--border);margin-bottom:3px}
+.ring-tooltip .tt-dim{color:var(--dim);font-size:10px}
+.donut-core { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 50%; pointer-events: none; overflow: hidden; }
+.donut-core::after { content: ""; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle, rgba(56,189,248,.35) 0%, transparent 70%); opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+.donut-core.breathe-idle::after { animation: breatheGlow 3.2s ease-in-out infinite; }
+@keyframes breatheGlow { 0%, 100% { opacity: 0.15; transform: scale(0.95); } 50% { opacity: 0.85; transform: scale(1.05); } }
+.phase-badge{font-size:12px;font-weight:bold;padding:3px 14px;border-radius:20px;background:#151e2b;color:var(--text);border:1px solid var(--border);margin-bottom:3px;transition:all .25s ease}
 .live-speed{font-size:26px; font-weight:bold; color:#fff; margin:3px 0; white-space: nowrap;}
 .live-pct{font-size:12px;color:var(--dim)}
-.donut-legend{flex:1;display:flex;flex-direction:column;gap:5px}.legend-row{display:flex;justify-content:space-between;align-items:center;background:#090e15;padding:5px 10px;border-radius:5px;border:1px solid var(--border)}.legend-title{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:bold}.dot{width:8px;height:8px;border-radius:2px}.legend-val{font-size:12.5px;font-weight:bold;color:#fff}
-.log-box { flex: 1; height: 100%; min-height: 0; overflow-y: auto; background: #04070b; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-family: monospace; font-size: 12px; }
-.task-card { background: #090e16; border: 1px solid #1a2538; border-radius: 7px; margin-bottom: 8px; overflow: hidden; }
-.task-card-header { display: flex; justify-content: space-between; align-items: center; background: #0d1522; padding: 6px 10px; font-size: 11.5px; }
-.task-badge-id { background: #1a273b; color: var(--input); padding: 2px 7px; border-radius: 4px; font-size: 11px; }
-.log-row { margin: 1px 0; padding: 4px 8px; border-radius: 4px; background: #070b12; border-left: 3px solid var(--border); display: flex; align-items: baseline; gap: 10px; font-size: 11.5px; }
-.log-tag { width: 110px; min-width: 110px; flex-shrink: 0; text-align: center; font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold; }
+.phase-IDLE { box-shadow: 0 0 0 1px rgba(100,116,139,.4), 0 0 16px rgba(56,189,248,.25); }
+.phase-INPUT { box-shadow: 0 0 0 1px var(--input), 0 0 20px rgba(56,189,248,.55); color: var(--input); }
+.phase-PREFIX { box-shadow: 0 0 0 1px var(--prefix), 0 0 20px rgba(99,102,241,.55); color: var(--prefix); }
+.phase-KV_RESTORE { box-shadow: 0 0 0 1px var(--reuse), 0 0 20px rgba(34,197,94,.55); color: var(--reuse); }
+.phase-PREFILL { box-shadow: 0 0 0 1px var(--prefill), 0 0 20px rgba(234,179,8,.55); color: var(--prefill); }
+.phase-DECODE { box-shadow: 0 0 0 1px var(--decode), 0 0 20px rgba(168,85,247,.6); color: var(--decode); }
+.phase-MTP { box-shadow: 0 0 0 1px var(--mtp), 0 0 20px rgba(6,182,212,.55); color: var(--mtp); }
+.phase-DONE { box-shadow: 0 0 0 1px #64748b, 0 0 12px rgba(100,116,139,0.25); color: #94a3b8; }
+.donut-legend{flex:1;display:flex;flex-direction:column;gap:5px}.legend-row{display:flex;justify-content:space-between;align-items:center;background:#090e15;padding:5px 10px;border-radius:5px;border:1px solid var(--border);transition:all .25s ease}.legend-row.active-row{border-color:var(--input);background:#121b28}.legend-title{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:bold}.dot{width:8px;height:8px;border-radius:2px}.legend-val{font-size:12.5px;font-weight:bold;color:#fff}
+.mtp-grid{display:flex;gap:4px;margin-top:4px}.mtp-item{flex:1 1 auto;text-align:center;font-size:9px}
+.mtp-col{background:#0b111a;height:28px;display:flex;align-items:flex-end;border-radius:3px;overflow:hidden;border:1px solid #1a2538}
+.mtp-fill{width:100%;background:rgba(6,182,212,0.25);border-top:2px solid var(--mtp-dim);box-shadow:0 0 6px rgba(6,182,212,0.2);transition:height .35s cubic-bezier(0.4, 0, 0.2, 1)}
+.hist-row-live{background:rgba(56,189,248,0.08) !important;border-left:2px solid var(--input)}
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--input);box-shadow:0 0 8px var(--input);animation:blink 1s infinite;margin-left:4px;vertical-align:middle}
+.log-box { flex: 1; height: 100%; min-height: 0; overflow-y: auto; overflow-anchor: none; background: #04070b; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-family: monospace; font-size: 12px; }
+.task-card { background: #090e16; border: 1px solid #1a2538; border-radius: 7px; margin-bottom: 8px; overflow: hidden; transition: all 0.25s ease; }
+.task-card.active-task-card { border-color: var(--input); box-shadow: 0 0 12px rgba(56,189,248,0.22); }
+.task-card.highlight-pulse { border-color: var(--input) !important; box-shadow: 0 0 18px var(--input) !important; animation: taskPulse 1.2s ease-out 1; }
+@keyframes taskPulse { 0% { transform: scale(0.985); } 50% { transform: scale(1.01); } 100% { transform: scale(1); } }
+.task-card-header { display: flex; justify-content: space-between; align-items: center; background: #0d1522; padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #162030; font-size: 11.5px; }
+.task-card-header:hover { background: #131f30; }
+.task-card-title { display: flex; align-items: center; gap: 8px; font-weight: bold; }
+.task-badge-id { background: #1a273b; color: var(--input); padding: 2px 7px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56,189,248,0.3); }
+.task-card-summary { font-size: 11px; color: var(--dim); }
+.task-card-body { padding: 4px 6px; display: flex; flex-direction: column; gap: 3px; }
+.log-row { margin: 1px 0; padding: 4px 8px; border-radius: 4px; background: #070b12; border-left: 3px solid var(--border); display: flex; align-items: baseline; gap: 10px; line-height: 1.35; font-size: 11.5px; }
+.log-tag { width: 108px; min-width: 108px; flex-shrink: 0; text-align: center; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold; letter-spacing: 0.2px; }
 .log-msg { flex: 1; min-width: 0; word-break: break-word; }
-.table-wrap{flex:1;height:100%;min-height:0;overflow-y:auto}.hist-table{width:100%;border-collapse:collapse;font-size:11px;font-family:monospace}.hist-table th,.hist-table td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--border)}.hist-table th{color:var(--dim);position:sticky;top:0;background:var(--panel)}
+.log-row .log-time { display: none; width: 75px; min-width: 75px; flex-shrink: 0; color: var(--dim); font-variant-numeric: tabular-nums; font-size: 10.5px; }
+#log-feed.show-time .log-row .log-time { display: inline-block; }
+#log-feed.hide-INPUT .log-row.INPUT { display: none !important; }
+#log-feed.hide-PREFIX .log-row.PREFIX:not([data-tag="SLOT SELECT"]) { display: none !important; }
+#log-feed.hide-SLOT_SELECT .log-row[data-tag="SLOT SELECT"] { display: none !important; }
+#log-feed.hide-KV_RESTORE .log-row.KV_RESTORE { display: none !important; }
+#log-feed.hide-KV_RAM .log-row.KV_RAM { display: none !important; }
+#log-feed.hide-PREFILL .log-row.PREFILL { display: none !important; }
+#log-feed.hide-DECODE .log-row.DECODE { display: none !important; }
+#log-feed.hide-MTP .log-row.MTP { display: none !important; }
+#log-feed.hide-DONE .log-row.DONE { display: none !important; }
+.log-row.INPUT { border-left-color: var(--input); }
+.log-row.INPUT .log-tag { background: rgba(56,189,248,.18); color: var(--input); border: 1px solid var(--input); }
+.log-row.PREFIX { border-left-color: var(--prefix); }
+.log-row.PREFIX .log-tag { background: rgba(99,102,241,.18); color: var(--prefix); border: 1px solid var(--prefix); }
+.log-row.PREFIX[data-tag="SLOT SELECT"] { border-left-color: var(--slot); }
+.log-row.PREFIX[data-tag="SLOT SELECT"] .log-tag { background: rgba(148,163,184,.15); color: var(--slot); border: 1px solid var(--slot); }
+.log-row.MTP { border-left-color: var(--mtp); }
+.log-row.MTP .log-tag { background: rgba(6,182,212,0.12); color: var(--mtp-dim); border: 1px solid rgba(6,182,212,0.4); }
+.log-row.KV_RESTORE { border-left-color: var(--reuse); }
+.log-row.KV_RESTORE .log-tag { background: rgba(34,197,94,.18); color: var(--reuse); border: 1px solid var(--reuse); }
+.log-row.KV_RESTORE[data-tag="KV REUSE RAM"] { border-left-color: var(--kv-save); }
+.log-row.KV_RESTORE[data-tag="KV REUSE RAM"] .log-tag { background: rgba(20,184,166,.18); color: var(--kv-save); border-color: var(--kv-save); }
+.log-row.KV_RESTORE[data-tag="CACHED PREFIX"] { border-left-color: var(--reuse); }
+.log-row.KV_RESTORE[data-tag="CACHED PREFIX"] .log-tag { background: rgba(34,197,94,.18); color: var(--reuse); border-color: var(--reuse); }
+.log-row.KV_RAM { border-left-color: var(--kv-save); }
+.log-row.KV_RAM .log-tag { background: rgba(20,184,166,.18); color: var(--kv-save); border: 1px solid var(--kv-save); }
+.log-row.KV_RAM[data-tag="KV EVICT RAM"] { border-left-color: var(--kv-evict); }
+.log-row.KV_RAM[data-tag="KV EVICT RAM"] .log-tag { background: rgba(71,85,105,0.2); color: #94a3b8; border: 1px solid var(--kv-evict); }
+.log-row.KV_RESTORE[data-tag="KV MISS"] { border-left-color: var(--red); }
+.log-row.KV_RESTORE[data-tag="KV MISS"] .log-tag { background: rgba(239,68,68,.2); color: var(--red); border-color: var(--red); }
+.log-row.PREFILL { border-left-color: var(--prefill); }
+.log-row.PREFILL .log-tag { background: rgba(234,179,8,.18); color: var(--prefill); border: 1px solid var(--prefill); }
+.log-row.DECODE { border-left-color: var(--decode); }
+.log-row.DECODE .log-tag { background: rgba(168,85,247,.18); color: var(--decode); border: 1px solid var(--decode); }
+.log-row.DONE { border-left-color: #64748b; }
+.log-row.DONE .log-tag { background: rgba(148,163,184,0.12); color: #94a3b8; border: 1px solid #64748b; }
+.table-wrap{flex:1;height:100%;min-height:0;overflow-y:auto}.hist-table{width:100%;border-collapse:collapse;font-size:11px;font-family:monospace}.hist-table th,.hist-table td{padding:5px 6px;text-align:left;border-bottom:1px solid var(--border);cursor:pointer}.hist-table th{color:var(--dim);position:sticky;top:0;background:var(--panel)}.hist-table tr:hover td{background:#131c2b}
+.badge-eff-high{color:var(--reuse);font-weight:bold}.badge-eff-med{color:var(--prefill);font-weight:bold}.badge-eff-low{color:var(--red);font-weight:bold}
+.badge-lost-zero{color:var(--dim);font-size:10px}.badge-lost-warn{background:rgba(239,68,68,.2);color:var(--red);padding:1px 5px;border-radius:4px;font-weight:bold}
+.status-tag{padding:1px 5px;border-radius:4px;font-size:9.5px;font-weight:bold;display:inline-block}
+.status-hot{background:rgba(34,197,94,.15);color:var(--reuse);border:1px solid rgba(34,197,94,.3)}
+.status-rewind{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
+.status-ram{background:rgba(20,184,166,.15);color:var(--kv-save);border:1px solid rgba(20,184,166,.3)}
+.status-cold{background:rgba(100,116,139,.15);color:var(--dim);border:1px solid var(--kv-evict)}
+.skew-tag{color:#f59e0b;font-size:10px}
+.hist-row-highlight { background: rgba(56,189,248,0.18) !important; outline: 1px solid var(--input); }
 
-/* Плеер */
-.player-bar { display:flex; align-items:center; gap:10px; background:#121a27; padding:6px 12px; border-radius:6px; border:1px solid var(--border); font-size:12px; }
-.btn-play { background:var(--input); color:#000; border:none; padding:5px 12px; border-radius:4px; font-weight:bold; cursor:pointer; }
-.btn-sec { background:transparent; border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; }
-.btn-sec:hover { border-color:var(--input); }
+/* Панель плеера */
+.play-controls { display:flex; align-items:center; gap:8px; background:#0b111a; border:1px solid var(--border); border-radius:6px; padding:3px 10px; }
+.btn-ctl { background:var(--panel); border:1px solid var(--border); color:var(--text); padding:3px 8px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:bold; }
+.btn-ctl:hover { border-color:var(--input); color:var(--input); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 </head>
 <body>
-  <!-- Верхняя плашка управления эмуляцией -->
   <div class="top-bar" style="display:flex; justify-content:space-between; align-items:center; background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:6px 12px; margin-bottom:10px; gap:12px;">
-    <div style="display:flex; align-items:center; gap:12px;">
-      <h1 style="margin:0; font-size:12px; font-weight:800; color:var(--input); letter-spacing:0.5px;">LLAMA.CPP REPLAY SIMULATOR</h1>
-      <div class="player-bar">
-        <button id="btn-toggle-play" class="btn-play">⏸ Пауза</button>
-        <button id="btn-restart" class="btn-sec">↺ Заново</button>
-        <label style="color:var(--dim);">Скорость:</label>
-        <select id="sel-speed" style="background:#090e15; border:1px solid var(--border); color:#fff; border-radius:4px; padding:3px 6px;">
-          <option value="1">1x (Реальная)</option>
-          <option value="2">2x</option>
-          <option value="5" selected>5x (Быстро)</option>
-          <option value="20">20x (Ультра)</option>
-        </select>
-        <span id="play-progress" style="color:var(--dim); font-size:11px;">Строка 0 / 0</span>
-      </div>
+    <div class="brand-box" style="display:flex; flex-direction:column; justify-content:center; flex-shrink:0; gap:1px;">
+      <h1 class="brand-title" style="margin:0; font-size:12px; font-weight:800; color:var(--input); letter-spacing:0.5px; line-height:1.15;">LLAMA.CPP INFERENCE</h1>
+      <div class="brand-sub" style="font-size:10px; font-weight:700; color:#f1f5f9; letter-spacing:0.3px; line-height:1.15;">CANONICAL REPLAY</div>
     </div>
 
-    <div style="display:flex; gap:8px; align-items:center;">
-      <label class="btn-sec" style="cursor:pointer; display:inline-block;">
-        📂 Загрузить свой .log
-        <input type="file" id="file-input" accept=".log,.txt" style="display:none;">
+    <!-- Интерактивный плеер логов -->
+    <div class="play-controls">
+      <button id="p-play" class="btn-ctl" style="color:var(--input)">⏸ Пауза</button>
+      <button id="p-restart" class="btn-ctl">↺ Заново</button>
+      <select id="p-speed" class="btn-ctl" style="cursor:pointer">
+        <option value="1">1x</option>
+        <option value="3">3x</option>
+        <option value="10" selected>10x</option>
+        <option value="50">50x</option>
+      </select>
+      <span id="p-status" style="font-size:11px; color:var(--dim); font-variant-numeric:tabular-nums;">Стр. 0 / 0</span>
+      <label class="btn-ctl" style="cursor:pointer; display:inline-block; font-weight:normal;">
+        📂 Лог
+        <input type="file" id="p-file" accept=".log,.txt" style="display:none">
       </label>
-      <div id="status-badge" class="badge badge-on">PLAYING DEMO</div>
+    </div>
+
+    <div class="flow-wrap" style="flex:1; min-width:0; display:flex; justify-content:center; align-items:center; overflow:hidden;">
+      <pre class="mermaid flow-diagram">
+flowchart LR
+  A["INPUT<br/><small>Промпт · CPU</small>"]
+  B["PREFIX / LCP<br/><small>Поиск совпадения</small>"]
+  C["KV REUSE / SOURCE<br/><small>Where is KV?</small>"]
+  D["PREFILL<br/><small>Новая часть · GPU</small>"]
+  E["DECODE<br/><small>Генерация · GEMV</small>"]
+  F["MTP / SPEC<br/><small>Драфт вперёд</small>"]
+  G["DONE<br/><small>Ответ готов</small>"]
+  H["HOT VRAM<br/><small>KV уже в GPU</small>"]
+  I["HOST RAM<br/><small>RAM → VRAM</small>"]
+  J["COLD START<br/><small>KV нет · полный prefill</small>"]
+  A --> B --> C
+  C --> H --> D
+  C --> I --> D
+  C --> J --> D
+  D --> E --> G
+  E <--> F
+  classDef in fill:#0d131d,stroke:#38bdf8,color:#f1f5f9,stroke-width:1.5px
+  classDef pf fill:#0d131d,stroke:#6366f1,color:#f1f5f9,stroke-width:1.5px
+  classDef kv fill:#0d131d,stroke:#22c55e,color:#f1f5f9,stroke-width:1.5px
+  classDef pr fill:#0d131d,stroke:#eab308,color:#f1f5f9,stroke-width:1.5px
+  classDef dc fill:#0d131d,stroke:#a855f7,color:#f1f5f9,stroke-width:1.5px
+  classDef mt fill:#0d131d,stroke:#06b6d4,color:#f1f5f9,stroke-width:1.5px
+  classDef dn fill:#0d131d,stroke:#64748b,color:#94a3b8,stroke-width:1px
+  classDef hv fill:#0d131d,stroke:#22c55e,color:#94a3b8,stroke-width:1px,font-size:9px
+  classDef hr fill:#0d131d,stroke:#14b8a6,color:#94a3b8,stroke-width:1px,font-size:9px
+  classDef cs fill:#0d131d,stroke:#64748b,color:#94a3b8,stroke-width:1px,font-size:9px
+  class A in
+  class B pf
+  class C kv
+  class D pr
+  class E dc
+  class F mt
+  class G dn
+  class H hv
+  class I hr
+  class J cs
+  linkStyle 0,1,8,9 stroke:#cbd5e1,stroke-width:1.5px
+  linkStyle 2,3,4,5,6,7 stroke:#475569,stroke-width:1px
+  linkStyle 10 stroke:#06b6d4,stroke-width:1px
+      </pre>
+    </div>
+
+    <div style="display:flex; gap:8px; align-items:center; flex-shrink:0;">
+      <div id="status-badge" class="badge badge-on">REPLAY ACTIVE</div>
     </div>
   </div>
 
@@ -75,45 +212,85 @@ html,body{height:100%;margin:0;padding:12px;font-family:-apple-system,BlinkMacSy
     <div class="left-col">
       <div class="card" style="padding:10px 12px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <span style="font-size:12px; font-weight:bold;">GPU VRAM KV-SLOT (<span id="hdr-ctx">123,136</span> CELLS)</span>
-          <span style="font-size:11px; color:var(--dim);">Input: <b id="val-input" style="color:var(--input)">0</b> ток.</span>
+          <span style="font-size:12px; font-weight:bold;">GPU VRAM KV-SLOT (<span id="hdr-ctx">124,672</span> CELLS)</span>
+          <span style="font-size:11px; color:var(--dim);">Total Input: <b id="val-input" style="color:var(--input)">0</b> ток.</span>
         </div>
         <div class="donut-layout">
           <div class="donut-box">
             <canvas id="reactor-canvas" width="480" height="480"></canvas>
+            <div class="ring-tooltip" id="ring-tooltip"></div>
             <div class="donut-core" id="donut-core-bg">
               <div id="core-phase" class="phase-badge">IDLE</div>
               <div id="core-speed" class="live-speed">—</div>
-              <div id="core-pct" class="live-pct">0 / 123k (0%)</div>
+              <div id="core-pct" class="live-pct">0 / 124k (0%)</div>
+              <div id="core-bottleneck" style="font-size:10px; color:var(--dim); letter-spacing:.5px; margin-top:5px;">IDLE</div>
             </div>
           </div>
           <div class="donut-legend">
-            <div class="legend-row">
+            <div class="legend-row" id="row-reuse">
               <div class="legend-title" style="color:var(--reuse)"><div class="dot" style="background:var(--reuse)"></div><span>KV REUSE:</span></div>
               <div class="legend-val" id="val-cached" style="color:var(--reuse)">0</div>
             </div>
-            <div class="legend-row">
+            <div class="legend-row" id="row-prefill">
               <div class="legend-title" style="color:var(--prefill)"><div class="dot" style="background:var(--prefill)"></div><span>PREFILL:</span></div>
               <div class="legend-val" id="val-delta" style="color:var(--prefill)">0</div>
             </div>
-            <div class="legend-row">
+            <div class="legend-row" id="row-decode">
               <div class="legend-title" style="color:var(--decode)"><div class="dot" style="background:var(--decode)"></div><span>DECODE:</span></div>
               <div class="legend-val" id="val-gen" style="color:var(--decode)">0</div>
+            </div>
+            <div class="legend-row" id="row-kv-roi" style="background:transparent; border:none; padding:1px 0; display:none;">
+              <div class="legend-title" style="color:var(--reuse)"><span>ROI:</span></div>
+              <div class="legend-val" id="lbl-kv-roi" style="color:var(--reuse);font-size:11px">—</div>
+            </div>
+            <div class="legend-row" style="background:transparent; border:none; padding:1px 0;">
+              <div class="legend-title" style="color:var(--dim)"><span>FREE:</span></div>
+              <div class="legend-val" id="val-free" style="color:var(--dim)">124,672 ток.</div>
             </div>
             <div class="legend-row" style="background:transparent; border:none; padding:1px 0;">
               <div class="legend-title" style="color:var(--dim)"><span>CHECKPOINTS</span></div>
               <div class="legend-val" id="legend-cp" style="color:var(--kv-save);font-size:11px">—/—</div>
             </div>
+            <div class="legend-row" style="background:transparent; border:none; padding:1px 0;">
+              <div class="legend-title" style="color:var(--dim)"><span>PROMPT CACHE</span></div>
+              <div class="legend-val" id="legend-ram" style="color:var(--input);font-size:11px">N/A</div>
+            </div>
+
+            <div style="border-top:1px solid rgba(255,255,255,0.08); margin:4px 0 2px 0;"></div>
+
+            <div class="legend-row" style="background:transparent; border:none; padding:1px 0;">
+              <div class="legend-title" style="color:var(--dim); font-size:10px;"><span>NGRAM-MOD SPEC:</span></div>
+              <div class="legend-val" id="lbl-ngram" style="color:var(--mtp); font-size:11px; font-weight:bold;">—</div>
+            </div>
+
+            <div style="margin-top:2px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:10.5px; font-weight:bold; color:var(--dim);">MTP DRAFT (1–<span id="lbl-mtp-n">5</span>):</div>
+                <span id="lbl-mtp-step" style="font-size:10.5px; color:var(--mtp); font-weight:bold;">— ток/такт</span>
+              </div>
+              <div class="mtp-grid" id="mtp-bars" style="margin-top:3px;"></div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="card card-history">
-        <div style="font-size:11.5px; font-weight:bold; margin-bottom:4px;">REQUEST HISTORY</div>
+      <div class="card card-history" style="padding:8px 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-size:11.5px; font-weight:bold;">REQUEST HISTORY <span style="font-weight:normal; color:var(--dim); font-size:10.5px;">(до 300 записей)</span></div>
+        </div>
         <div class="table-wrap">
           <table class="hist-table">
             <thead>
-              <tr><th>TIME</th><th>TASK</th><th>INPUT</th><th>KV REUSE</th><th>PREFILL</th><th>DECODE</th><th>SPEED</th></tr>
+              <tr>
+                <th>TIME</th><th>TASK</th>
+                <th style="color:var(--input)">INPUT</th>
+                <th style="color:var(--reuse)">KV REUSE</th>
+                <th>EFF%</th><th>Δ LOST</th><th>STATUS</th><th>SKEW</th>
+                <th style="color:var(--prefill)">PREFILL</th>
+                <th style="color:var(--decode)">DECODE</th>
+                <th style="color:var(--mtp)">MTP</th>
+                <th>SPEED</th>
+              </tr>
             </thead>
             <tbody id="hist-rows"></tbody>
           </table>
@@ -123,295 +300,612 @@ html,body{height:100%;margin:0;padding:12px;font-family:-apple-system,BlinkMacSy
 
     <div class="right-col">
       <div class="card card-log">
-        <div style="font-size:12px; font-weight:bold; margin-bottom:6px;">EVENT LOG (GPU & RAM TELEMETRY)</div>
+        <div class="card-log-collapsed-bar" id="log-collapsed-bar" title="Развернуть EVENT LOG">
+          <span class="log-bar-label">EVENT LOG</span>
+          <span class="log-bar-badge" id="log-bar-badge">0</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; position:relative;">
+          <div style="font-size:12px; font-weight:bold;">EVENT LOG (GPU & RAM TELEMETRY)</div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button id="btn-log-filter" style="background:#151e2b; border:1px solid var(--border); color:var(--text); border-radius:4px; font-size:11px; padding:2px 8px; cursor:pointer;">
+              <span>🌪 Фильтр</span>
+            </button>
+            <button id="btn-toggle-log" style="background:#151e2b; border:1px solid var(--border); color:var(--dim); border-radius:4px; font-size:10px; padding:2px 6px; cursor:pointer;">▶</button>
+          </div>
+
+          <div id="log-filter-popover" style="display:none; position:absolute; top:28px; right:0; width:220px; background:#0d1522; border:1px solid var(--border); box-shadow:0 8px 24px rgba(0,0,0,0.7); border-radius:6px; padding:10px; z-index:100; font-size:11px;">
+            <div style="font-weight:bold; color:var(--text); margin-bottom:8px; border-bottom:1px solid var(--border); padding-bottom:4px; display:flex; justify-content:space-between;">
+              <span>Настройки</span>
+              <span id="btn-filter-reset" style="color:var(--input); cursor:pointer;">Все</span>
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; margin-bottom:8px; cursor:pointer; color:var(--input);">
+              <input type="checkbox" id="filter-show-time">
+              <span>Время [hh:mm:ss]</span>
+            </label>
+            <div style="display:flex; flex-direction:column; gap:4px;">
+              <label><input type="checkbox" class="tag-filter" data-target="INPUT" checked> INPUT</label>
+              <label><input type="checkbox" class="tag-filter" data-target="PREFIX" checked> PREFIX</label>
+              <label><input type="checkbox" class="tag-filter" data-target="KV_RESTORE" checked> KV REUSE</label>
+              <label><input type="checkbox" class="tag-filter" data-target="KV_RAM" checked> KV RAM</label>
+              <label><input type="checkbox" class="tag-filter" data-target="PREFILL" checked> PREFILL</label>
+              <label><input type="checkbox" class="tag-filter" data-target="DECODE" checked> DECODE</label>
+              <label><input type="checkbox" class="tag-filter" data-target="MTP" checked> MTP</label>
+              <label><input type="checkbox" class="tag-filter" data-target="DONE" checked> DONE</label>
+            </div>
+          </div>
+        </div>
         <div class="log-box" id="log-feed"></div>
       </div>
     </div>
   </div>
 
-  <script>
-  // ================= 1. ВСТРОЕННЫЙ ДЕМО-ЛОГ LLAMA.CPP =================
-  const DEMO_LOG = `
-[2026-10-02T20:00:00.000Z] srv load_model: initializing, n_slots = 1, n_ctx_slot = 123136, kv_unified = 'false'
-[2026-10-02T20:00:01.000Z] selected slot by LRU id 0
-[2026-10-02T20:00:01.100Z] new prompt, task.n_tokens = 45000, n_ctx_slot = 123136
-[2026-10-02T20:00:01.200Z] forcing full prompt re-processing
-[2026-10-02T20:00:02.000Z] prompt processing progress = 0.25, 420.5 tokens per second
-[2026-10-02T20:00:03.000Z] prompt processing progress = 0.50, 422.0 tokens per second
-[2026-10-02T20:00:04.000Z] prompt processing progress = 0.75, 419.0 tokens per second
-[2026-10-02T20:00:05.000Z] prompt eval time = 4500.00 ms / 45000 tokens (421.20 tokens per second)
-[2026-10-02T20:00:05.500Z] created context checkpoint 1 of 8 id 0 | n_tokens = 45000, size = 512.0 MiB
-[2026-10-02T20:00:06.000Z] tg = 34.2 t/s, n_gen = 50
-[2026-10-02T20:00:07.000Z] tg = 35.1 t/s, n_gen = 120
-[2026-10-02T20:00:08.000Z] tg = 34.8 t/s, n_gen = 250
-[2026-10-02T20:00:09.000Z] eval time = 3000.00 ms / 250 tokens (34.80 tokens per second)
-[2026-10-02T20:00:11.000Z] checking sim = 0.95 (45000/47000) id 0
-[2026-10-02T20:00:11.100Z] new prompt, task.n_tokens = 47000, n_ctx_slot = 123136
-[2026-10-02T20:00:11.200Z] restored context checkpoint id 0 | n_tokens = 45000, size = 512.0 MiB
-[2026-10-02T20:00:11.800Z] prompt eval time = 300.00 ms / 2000 tokens (410.00 tokens per second)
-[2026-10-02T20:00:12.500Z] tg = 34.5 t/s, n_gen = 80
-[2026-10-02T20:00:13.500Z] tg = 34.9 t/s, n_gen = 190
-[2026-10-02T20:00:14.000Z] eval time = 2200.00 ms / 190 tokens (34.90 tokens per second)
-`.trim().split('\n');
+  <!-- ДИАЛОГ ДИАГРАММЫ PIPELINE -->
+  <div id="flow-overlay" class="flow-overlay">
+    <div class="flow-viewer-toolbar">
+      <span class="flow-viewer-title">INFERENCE PIPELINE</span>
+      <button id="fv-zoom-out" type="button">&minus;</button>
+      <span id="fv-zoom-val">100%</span>
+      <button id="fv-zoom-in" type="button">+</button>
+      <button id="fv-reset" type="button">RESET</button>
+      <button id="fv-close" type="button">&times;</button>
+    </div>
+    <div id="flow-viewer-canvas" class="flow-viewer-canvas"></div>
+  </div>
 
-  // ================= 2. СОСТОЯНИЕ И ПАРСЕР ИЗ ВАШЕГО СКРИПТА =================
+  <script>
+  // ================= 1. ПОЛНАЯ МОДЕЛЬ И ДВИЖОК ЭФФЕКТОВ =================
+  const FX = { born: 900, touch: 8000, death: 2000, beam: 1500, grow: 500 };
+  const clamp01 = x => x < 0 ? 0 : x > 1 ? 1 : x;
+  const decay = (age, ms) => (age < 0 || age > ms) ? 0 : (1 - age / ms) ** 2;
+  function fx(e, now) {
+    return {
+      born:  e.createdAt ? decay(now - e.createdAt, FX.born) : 0,
+      touch: e.touchedAt ? decay(now - e.touchedAt, FX.touch) : 0,
+      death: e.removedAt ? clamp01((now - e.removedAt) / FX.death) : 0,
+      until: Math.max(e.createdAt ? e.createdAt + FX.born : 0,
+                      e.touchedAt ? e.touchedAt + FX.touch : 0,
+                      e.removedAt ? e.removedAt + FX.death : 0)
+    };
+  }
+
+  function buildRingModel(s) {
+    const ram = s.ramCache || {};
+    const nCtx = s.n_ctxMismatch ? null : (Number(s.n_ctx) || null);
+    const cpMarks = Object.values(ram.slots || {}).map(sl => ({
+      slot: sl.slot != null ? sl.slot : null,
+      tokens: sl.tokens, sizeMiB: sl.size,
+      frac: nCtx ? sl.tokens / nCtx : null,
+      createdAt: sl.createdAt || sl.time || null,
+      touchedAt: sl.lastRestored || null,
+      removedAt: sl.removedAt || sl.evictedAt || null,
+      restoreCount: sl.restoreCount || 0
+    })).sort((a, b) => a.tokens - b.tokens);
+
+    const liveCpCount = cpMarks.filter(m => !m.removedAt).length;
+    const cp = { marks: cpMarks, count: ram.cpCurrent != null ? ram.cpCurrent : liveCpCount, max: ram.cpMax, state: ram.cpMax == null ? 'na' : 'ok' };
+
+    const limit = ram.limitMiB != null ? Number(ram.limitMiB) : null;
+    const used = ram.promptCacheMiB != null ? Number(ram.promptCacheMiB) : null;
+    const limitEff = (limit != null && limit > 0) ? limit : (used != null && used > 0 ? used : null);
+    const allEntries = ram.entries || [];
+    const liveEntries = allEntries.filter(e => !e.removedAt);
+    const sumLive = liveEntries.reduce((a, e) => a + (Number(e.sizeMiB) || 0), 0);
+    const items = allEntries.map(e => ({ key: e.key, tokens: e.tokens, checkpoints: e.checkpoints, sizeMiB: Number(e.sizeMiB) || 0, createdAt: e.createdAt, touchedAt: e.touchedAt, removedAt: e.removedAt }));
+    const k = (used != null && sumLive > 0) ? used / sumLive : 1;
+    if (used != null && used > 0 && sumLive === 0) items.push({ key: '~', tokens: 0, checkpoints: 0, sizeMiB: used, createdAt: null, touchedAt: null, removedAt: null });
+
+    let until = 0;
+    for (const m of cpMarks) {
+      const u = Math.max(m.createdAt ? m.createdAt + FX.born : 0, m.touchedAt ? m.touchedAt + FX.touch : 0, m.removedAt ? m.removedAt + FX.death : 0);
+      if (u > until) until = u;
+    }
+    for (const it of items) {
+      const u = Math.max(it.createdAt ? it.createdAt + FX.grow + FX.born : 0, it.touchedAt ? it.touchedAt + FX.touch : 0, it.removedAt ? it.removedAt + FX.death : 0);
+      if (u > until) until = u;
+    }
+    return { cp, ram: { items, k, used, limit: limitEff, tokensUsed: liveEntries.reduce((a, e) => a + (Number(e.tokens) || 0), 0), limitTokens: ram.limitTokens, state: limit == null ? 'na' : 'ok' }, until };
+  }
+
+  function computeRing3Layout(ram, now, fxEnabled) {
+    const arcs = [];
+    let until = 0, total = 0;
+    if (ram.limit == null || ram.limit <= 0) return { arcs, until: 0 };
+    for (const it of ram.items) {
+      const death = it.removedAt ? clamp01((now - it.removedAt) / FX.death) : 0;
+      if (it.removedAt && (!fxEnabled || death >= 1)) continue;
+      const grow = (fxEnabled && it.createdAt) ? clamp01((now - it.createdAt) / FX.grow) : 1;
+      const len = it.sizeMiB * ram.k / ram.limit * (it.removedAt ? 1 - death : grow);
+      arcs.push({ key: it.key, tokens: it.tokens, checkpoints: it.checkpoints, sizeMiB: it.sizeMiB, start: 0, len, createdAt: it.createdAt, touchedAt: it.touchedAt, removedAt: it.removedAt, death, grow });
+      total += len;
+      const u = Math.max(it.createdAt ? it.createdAt + FX.grow + FX.born : 0, it.touchedAt ? it.touchedAt + FX.touch : 0, it.removedAt ? it.removedAt + FX.death : 0);
+      if (u > until) until = u;
+    }
+    const scale = total > 1 ? 1 / total : 1;
+    let acc = 0;
+    for (const a of arcs) { a.len *= scale; a.start = acc; acc += a.len; }
+    return { arcs, until };
+  }
+
+  // ================= 2. CANONICAL STATE & PARSER =================
   function freshTaskState() {
     return {
-      id: null, totalPrompt: 0, lcpTokens: 0, lcpRatio: 0, kvRestoredTokens: 0,
-      deltaTokens: 0, prefillTokens: 0, prefillProgress: 0, prefillTps: 0,
-      generatedTokens: 0, decodeTps: 0, decodeStarted: false, prefillReported: false,
-      slotSource: null, checkpointRestore: false
+      id: null, totalPrompt: 0, lcpTokens: 0, lcpRatio: 0, kvRestoredTokens: 0, kvRestoredMiB: 0,
+      deltaTokens: 0, prefillTokens: 0, prefillProgress: 0, prefillMs: 0, prefillTps: 0,
+      generatedTokens: 0, decodeTps: 0, decodeTpsPeak: 0, decodeMs: 0, mtpAcceptance: 0,
+      mtpMeanLen: 0, mtpPosAcc: [null, null, null, null, null], mtpAccepted: null, mtpGenerated: null,
+      isTruncated: false, decodeStarted: false, prefillReported: false, kvEventEmitted: false,
+      cachedFirstSeen: false, slotSource: null, checkpointRestore: false, lastProgressStep: 0, divergeInfo: null
     };
   }
 
   const state = {
-    serverOnline: true, n_ctx: 123136, currentStage: 'IDLE',
-    ramCache: { cpCreated: 0, cpErased: 0, cpCurrent: 0, cpMax: 8, slots: {} },
-    task: freshTaskState(), history: [], events: []
+    serverOnline: true, n_ctx: 124672, n_ctxSrc: 'init', n_prompt_tokens: 0, is_processing: false,
+    currentStage: 'IDLE', _awaitingIdle: false, _doneSince: 0, _processingStart: 0,
+    serverMetrics: { queueDeferred: 0, kvAuthoritativeRatio: null, promptTokensTotal: 0, tokensPredictedTotal: 0 },
+    ramCache: { limitMiB: 32768, usedMiB: 0, promptsCount: 0, cpCreated: 0, cpErased: 0, cpCurrent: 0, cpMax: 32, slots: {}, entries: [] },
+    task: freshTaskState(), mtpN: 5, lastPrefillTps: 0, ngram: { accTokens: 0, genTokens: 0, meanLen: 0, posAcc: [] },
+    history: [], events: []
   };
 
-  let pendingLcp = null, pendingLru = null;
+  let pendingLcp = null, pendingRamLcp = null, pendingLru = null;
 
   function addEvent(stage, tag, title, detail, explicitTaskId = null) {
+    const ts = new Date().toLocaleTimeString();
     state.currentStage = stage;
     const tid = explicitTaskId !== null ? String(explicitTaskId) : (state.task.id ? String(state.task.id) : 'SYS');
-    state.events.unshift({ ts: new Date().toLocaleTimeString(), stage, tag, title, detail, taskId: tid });
-    if (state.events.length > 300) state.events.pop();
-    render();
+    state.events.unshift({ ts, stage, tag, title, detail, id: Date.now() + Math.random(), taskId: tid });
+    if (state.events.length > 500) state.events.pop();
+    scheduleRender();
+  }
+
+  function pushHistory(extra) {
+    const lcp = state.task.lcpTokens || 0;
+    const kvReuse = state.task.kvRestoredTokens || 0;
+    state.history.unshift(Object.assign({
+      id: String(state.task.id || '—'), input: state.task.totalPrompt, lcp, kvReuse,
+      cpSkew: Math.max(0, lcp - kvReuse), divergeInfo: state.task.divergeInfo || null,
+      slotSource: state.task.slotSource || null, checkpointRestore: Boolean(state.task.checkpointRestore),
+      prefill: state.task.prefillTokens || state.task.deltaTokens, prefillSource: state.task.prefillTokens ? 'measured' : 'estimated',
+      decode: state.task.generatedTokens, speed: state.task.decodeTps, total: state.task.totalPrompt + state.task.generatedTokens,
+      isTruncated: Boolean(state.task.isTruncated), mtpAccepted: state.task.mtpAccepted || null,
+      mtpGenerated: state.task.mtpGenerated || null, mtpAcceptance: state.task.mtpAcceptance || null,
+      mtpMeanLen: state.task.mtpMeanLen || null, time: new Date().toLocaleTimeString()
+    }, extra));
+    if (state.history.length > 300) state.history.pop();
   }
 
   function handleLine(line) {
-    if (!line) return;
+    if (!line || line.includes('update_slots: all slots are idle')) return;
+
     if (line.includes('initializing,') && line.includes('n_ctx_slot =')) {
       const m = line.match(/n_ctx_slot\s*=\s*(\d+)/);
       if (m) state.n_ctx = parseInt(m[1], 10);
+      return;
     }
-    else if (line.includes('selected slot by LRU')) {
-      pendingLcp = null; pendingLru = { slotId: '0' };
-    }
-    else if (line.includes('checking sim =')) {
-      const m = line.match(/checking sim\s*=\s*([\d.]+)(?:\s*\((\d+)\/(\d+)\))?/);
-      if (m) pendingLcp = { ratio: parseFloat(m[1]), tokens: parseInt(m[2]||0, 10), pct: (parseFloat(m[1])*100).toFixed(1) };
-    }
-    else if (line.includes('new prompt,')) {
-      const m = line.match(/(?:task\s+(\d+).*?)?new prompt,.*?(?:task\.n_tokens|n_prompt_tokens)\s*=\s*(\d+)/);
-      const tid = m ? (m[1] || '0') : '0';
-      const promptTokens = m ? parseInt(m[2], 10) : 0;
-      state.task = freshTaskState();
-      state.task.id = tid;
-      state.task.totalPrompt = promptTokens;
-      addEvent('INPUT', 'INPUT', `Запрос #${tid}`, `Получено ${promptTokens} токенов`, tid);
-      if (pendingLcp) {
-        state.task.lcpTokens = pendingLcp.tokens;
-        addEvent('PREFIX', 'PREFIX', 'LCP совпадение', `${pendingLcp.pct}% (${pendingLcp.tokens} ток.)`, tid);
-        pendingLcp = null;
-      }
-    }
-    else if (line.includes('restored context checkpoint')) {
-      const mTokens = line.match(/n_tokens\s*=\s*(\d+)/);
-      const tokens = mTokens ? parseInt(mTokens[1], 10) : 0;
-      state.task.kvRestoredTokens = tokens;
-      state.task.checkpointRestore = true;
-      state.task.deltaTokens = Math.max(0, state.task.totalPrompt - tokens);
-      addEvent('KV_RESTORE', 'KV REUSE RAM', 'Кэш поднят из RAM', `${tokens} ток. поднято из RAM в VRAM`);
-    }
-    else if (line.includes('forcing full prompt re-processing')) {
-      state.task.kvRestoredTokens = 0;
-      state.task.deltaTokens = state.task.totalPrompt;
-      addEvent('KV_RESTORE', 'KV MISS', 'Cold Start', `Полный prefill с нуля`);
-    }
-    else if (line.includes('created context checkpoint')) {
-      state.ramCache.cpCreated++;
-      state.ramCache.cpCurrent++;
-      addEvent('KV_RAM', 'KV SAVE RAM', 'Чекпоинт сохранен', `Контекст сохранен в Host RAM`);
-    }
-    else if (line.includes('prompt processing progress =')) {
-      const m = line.match(/progress\s*=\s*([\d.]+)(?:.*?([\d.]+)\s*tokens per second)?/);
-      if (m) {
-        state.currentStage = 'PREFILL';
-        state.task.prefillProgress = Math.round(parseFloat(m[1]) * 100);
-        if (m[2]) state.task.prefillTps = parseFloat(m[2]);
-        render();
-      }
-    }
-    else if (line.includes('prompt eval time =')) {
-      const m = line.match(/prompt eval time\s*=\s*([\d.]+)\s*ms\s*\/\s*(\d+)\s*tokens.*?([\d.]+)\s*tokens/);
-      if (m) {
-        state.task.prefillTokens = parseInt(m[2], 10);
-        state.task.prefillTps = parseFloat(m[3]);
-        addEvent('PREFILL', 'PREFILL', 'Префилл завершен', `${m[2]} ток. за ${m[1]} мс (${m[3]} t/s)`);
-      }
-    }
-    else if (line.includes('tg =')) {
-      const m = line.match(/n_gen\s*=\s*(\d+),\s*tg\s*=\s*([\d.]+)\s*t\/s/);
+
+    if (line.includes('tg =') && (line.includes('n_gen =') || line.includes('n_decoded ='))) {
+      const m = line.match(/(?:n_gen|n_decoded)\s*=\s*(\d+),\s*tg\s*=\s*([\d.]+)\s*t\/s(?:,\s*tg_3s\s*=\s*([\d.]+)\s*t\/s)?/);
       if (m) {
         state.currentStage = 'DECODE';
+        state.is_processing = true;
         state.task.generatedTokens = parseInt(m[1], 10);
         state.task.decodeTps = parseFloat(m[2]);
+        if (m[3]) state.task.decodeTpsPeak = parseFloat(m[3]);
         if (!state.task.decodeStarted) {
           state.task.decodeStarted = true;
           addEvent('DECODE', 'DECODE', 'Старт генерации', `Вывод начался (${m[2]} t/s)...`);
         }
-        render();
+        scheduleRender();
       }
+      return;
     }
-    else if (line.includes('eval time =') && !line.includes('prompt eval')) {
-      const m = line.match(/eval time\s*=\s*([\d.]+)\s*ms\s*\/\s*(\d+)\s*tokens.*?([\d.]+)\s*tokens/);
+
+    if (line.includes('selected slot by LRU')) {
+      pendingLcp = null;
+      pendingLru = { slotId: '0' };
+    } else if (line.includes('checking sim =') || line.includes('f_sim_best =')) {
+      const m = line.match(/(?:checking sim|sim_best|f_sim_best)\s*=\s*([\d.]+)(?:\s*\((\d+)\/(\d+)\))?/);
       if (m) {
+        const ratio = parseFloat(m[1]);
+        const tokens = m[2] ? parseInt(m[2], 10) : 0;
+        pendingLcp = { ratio, tokens, pct: (ratio * 100).toFixed(1), slotId: '0' };
+      }
+    } else if (line.includes('new prompt,') && (line.includes('task.n_tokens') || line.includes('n_prompt_tokens'))) {
+      const m = line.match(/(?:task\s+(\d+).*?)?new prompt,.*?(?:task\.n_tokens|n_prompt_tokens)\s*=\s*(\d+)/);
+      if (m) {
+        const tid = m[1] || '0';
+        const promptTokens = parseInt(m[2], 10);
+        state.task = freshTaskState();
+        state.task.id = tid;
+        state.task.totalPrompt = promptTokens;
+        state.is_processing = true;
+        state._processingStart = Date.now();
+        addEvent('INPUT', 'INPUT', `Запрос #${tid}`, `Получено <b>${promptTokens.toLocaleString()}</b> токенов`, tid);
+        if (pendingLcp) {
+          state.task.lcpRatio = pendingLcp.ratio;
+          state.task.lcpTokens = pendingLcp.tokens || Math.round(promptTokens * pendingLcp.ratio);
+          state.task.slotSource = 'hot-vram';
+          addEvent('PREFIX', 'PREFIX', 'LCP Сверка', `Совпадение: <b>${pendingLcp.pct}%</b> (${state.task.lcpTokens.toLocaleString()} ток.)`, tid);
+          pendingLcp = null;
+        } else if (pendingLru) {
+          state.task.slotSource = 'empty';
+          addEvent('PREFIX', 'SLOT SELECT', 'Выбор слота', `Cold Start`, tid);
+          pendingLru = null;
+        }
+        state.task.deltaTokens = Math.max(0, promptTokens - state.task.lcpTokens);
+      }
+    } else if (line.includes('restored context checkpoint')) {
+      const mTokens = line.match(/n_tokens\s*=\s*(\d+)/);
+      const mSize = line.match(/size\s*=\s*([\d.]+)\s*MiB/);
+      const tokens = mTokens ? parseInt(mTokens[1], 10) : 0;
+      const size = mSize ? mSize[1] : '0';
+      state.task.kvRestoredTokens = tokens;
+      state.task.kvRestoredMiB = parseFloat(size);
+      state.task.checkpointRestore = true;
+      state.task.deltaTokens = Math.max(0, state.task.totalPrompt - tokens);
+      addEvent('KV_RESTORE', 'KV REUSE RAM', 'Кэш поднят из RAM', `Восстановлено <b>${tokens.toLocaleString()}</b> ток. (${size} MiB) в VRAM.`);
+    } else if (line.includes('forcing full prompt re-processing')) {
+      state.task.kvRestoredTokens = 0;
+      state.task.deltaTokens = state.task.totalPrompt;
+      addEvent('KV_RESTORE', 'KV MISS', 'Cold Start', `Полный prefill с нуля`);
+    } else if (line.includes('cached n_tokens =')) {
+      const m = line.match(/cached n_tokens\s*=\s*(\d+)/);
+      if (m && !state.task.cachedFirstSeen) {
+        state.task.cachedFirstSeen = true;
+        const tokens = parseInt(m[1], 10);
+        if (tokens > 0 && !state.task.checkpointRestore) {
+          state.task.kvRestoredTokens = tokens;
+          state.task.deltaTokens = Math.max(0, state.task.totalPrompt - tokens);
+          addEvent('KV_RESTORE', 'CACHED PREFIX', 'Горячий префикс', `В VRAM найдено <b>${tokens.toLocaleString()}</b> ток.`);
+        }
+      }
+    } else if (line.includes('created context checkpoint')) {
+      const m = line.match(/created context checkpoint\s+(\d+)\s+of\s+(\d+)/);
+      const mTok = line.match(/n_tokens\s*=\s*(\d+)/);
+      const mSize = line.match(/size\s*=\s*([\d.]+)\s*MiB/);
+      if (m && mTok && mSize) {
+        state.ramCache.cpCreated++;
+        state.ramCache.cpCurrent = parseInt(m[1], 10);
+        state.ramCache.cpMax = parseInt(m[2], 10);
+        const tok = parseInt(mTok[1], 10);
+        state.ramCache.slots['0:' + tok] = { slot: 0, tokens: tok, size: parseFloat(mSize[1]), createdAt: Date.now() };
+        addEvent('KV_RAM', 'KV SAVE RAM', 'Чекпоинт сохранен', `Слот ${m[1]}/${m[2]}: <b>${tok.toLocaleString()}</b> ток. (${mSize[1]} MiB)`);
+      }
+    } else if (line.includes('erasing context checkpoint') || line.includes('erased')) {
+      state.ramCache.cpErased++;
+      const mTok = line.match(/n_tokens\s*=\s*(\d+)/);
+      if (mTok) {
+        const tok = parseInt(mTok[1], 10);
+        if (state.ramCache.slots['0:' + tok]) {
+          state.ramCache.slots['0:' + tok].removedAt = Date.now();
+        }
+      }
+    } else if (line.includes('prompt processing') && line.includes('progress =')) {
+      const m = line.match(/progress\s*=\s*([\d.]+)(?:.*?([\d.]+)\s*tokens per second)?/);
+      if (m) {
+        state.currentStage = 'PREFILL';
+        state.is_processing = true;
+        state.task.prefillProgress = Math.round(parseFloat(m[1]) * 100);
+        if (m[2]) { state.task.prefillTps = parseFloat(m[2]); state.lastPrefillTps = state.task.prefillTps; }
+        scheduleRender();
+      }
+    } else if (line.includes('prompt eval time =')) {
+      const m = line.match(/prompt eval time\s*=\s*([\d.]+)\s*ms\s*\/\s*(\d+)\s*tokens.*?([\d.]+)\s*tokens per second/);
+      if (m) {
+        state.task.prefillMs = parseFloat(m[1]);
+        state.task.prefillTokens = parseInt(m[2], 10);
+        state.task.prefillTps = parseFloat(m[3]);
+        state.lastPrefillTps = state.task.prefillTps;
+        addEvent('PREFILL', 'PREFILL', 'Префилл завершен', `GPU: <b>${m[2]}</b> ток. за ${m[1]} мс (<b>${m[3]} tok/s</b>)`);
+      }
+    } else if (line.includes('draft acceptance =')) {
+      const m = line.match(/draft acceptance\s*=\s*([\d.]+)\s*\(\s*(\d+)\s*accepted\s*\/\s*(\d+)\s*generated\)(?:,\s*mean len\s*=\s*([\d.]+))?/);
+      if (m) {
+        state.task.mtpAcceptance = (parseFloat(m[1]) * 100).toFixed(1);
+        state.task.mtpAccepted = parseInt(m[2], 10);
+        state.task.mtpGenerated = parseInt(m[3], 10);
+        state.task.mtpMeanLen = m[4] ? parseFloat(m[4]) : 0;
+        addEvent('MTP', 'MTP', 'Драфт MTP', `Принято: <b>${m[2]}</b> / ${m[3]} (<b>${state.task.mtpAcceptance}%</b>) | Длина: <b>${state.task.mtpMeanLen}</b>`);
+      }
+    } else if (line.includes('draft-mtp:') && line.includes('acc rate/pos =')) {
+      const m = line.match(/acc rate\/pos\s*=\s*\(([-\d.,\s]+)\)/);
+      if (m) {
+        state.task.mtpPosAcc = m[1].split(',').map(x => (parseFloat(x.trim()) * 100).toFixed(0));
+        state.mtpN = state.task.mtpPosAcc.length;
+        scheduleRender();
+      }
+    } else if (line.includes('statistics') && line.includes('ngram-mod:')) {
+      const mAcc = line.match(/#acc tokens\s*=\s*(\d+)/);
+      const mGen = line.match(/#gen tokens\s*=\s*(\d+)/);
+      const mLen = line.match(/#mean acc len\s*=\s*([\d.]+)/);
+      state.ngram.accTokens = mAcc ? parseInt(mAcc[1], 10) : 0;
+      state.ngram.genTokens = mGen ? parseInt(mGen[1], 10) : 0;
+      state.ngram.meanLen = mLen ? parseFloat(mLen[1]) : 0;
+      scheduleRender();
+    } else if (line.includes('eval time =') && !line.includes('prompt eval')) {
+      const m = line.match(/eval time\s*=\s*([\d.]+)\s*ms\s*\/\s*(\d+)\s*tokens.*?([\d.]+)\s*tokens per second/);
+      if (m) {
+        state.task.decodeMs = parseFloat(m[1]);
         state.task.generatedTokens = parseInt(m[2], 10);
         state.task.decodeTps = parseFloat(m[3]);
         state.currentStage = 'DONE';
-        addEvent('DONE', 'DONE', 'Ответ завершен', `Сгенерировано ${m[2]} ток. (${m[3]} t/s)`);
-        state.history.unshift({
-          id: state.task.id || '0', time: new Date().toLocaleTimeString(),
-          input: state.task.totalPrompt, kvReuse: state.task.kvRestoredTokens,
-          prefill: state.task.prefillTokens || state.task.deltaTokens,
-          decode: state.task.generatedTokens, speed: state.task.decodeTps
-        });
-        render();
+        state.is_processing = false;
+        addEvent('DONE', 'DONE', 'Генерация завершена', `Сгенерировано <b>${m[2]}</b> ток. за ${(parseFloat(m[1])/1000).toFixed(2)}с (<b>${m[3]} t/s</b>)`);
+        pushHistory({});
       }
     }
   }
 
-  // ================= 3. ДВИЖОК ЭМУЛЯЦИИ И ВОСПРОИЗВЕДЕНИЯ =================
-  let currentLogLines = [...DEMO_LOG];
-  let lineIdx = 0;
-  let isPlaying = true;
-  let speedMultiplier = 5;
-  let playTimer = null;
-
-  function stepPlayback() {
-    if (!isPlaying || lineIdx >= currentLogLines.length) return;
-    const line = currentLogLines[lineIdx];
-    handleLine(line);
-    lineIdx++;
-    document.getElementById('play-progress').innerText = `Строка ${lineIdx} / ${currentLogLines.length}`;
-
-    if (lineIdx < currentLogLines.length) {
-      playTimer = setTimeout(stepPlayback, 500 / speedMultiplier);
-    } else {
-      isPlaying = false;
-      document.getElementById('btn-toggle-play').innerText = '▶ Заново';
-    }
-  }
-
-  function startPlayback() {
-    isPlaying = true;
-    clearTimeout(playTimer);
-    stepPlayback();
-  }
-
-  document.getElementById('btn-toggle-play').addEventListener('click', () => {
-    if (lineIdx >= currentLogLines.length) {
-      lineIdx = 0;
-      startPlayback();
-      document.getElementById('btn-toggle-play').innerText = '⏸ Пауза';
-      return;
-    }
-    isPlaying = !isPlaying;
-    document.getElementById('btn-toggle-play').innerText = isPlaying ? '⏸ Пауза' : '▶ Старт';
-    if (isPlaying) stepPlayback();
-  });
-
-  document.getElementById('btn-restart').addEventListener('click', () => {
-    lineIdx = 0;
-    state.events = [];
-    state.history = [];
-    state.task = freshTaskState();
-    startPlayback();
-  });
-
-  document.getElementById('sel-speed').addEventListener('change', (e) => {
-    speedMultiplier = parseFloat(e.target.value);
-  });
-
-  // Загрузка своего .log файла пользователем
-  document.getElementById('file-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      currentLogLines = evt.target.result.split('\n').filter(Boolean);
-      lineIdx = 0;
-      state.events = [];
-      state.history = [];
-      state.task = freshTaskState();
-      document.getElementById('status-badge').innerText = 'PLAYING: ' + file.name;
-      startPlayback();
-    };
-    reader.readAsText(file);
-  });
-
-  // ================= 4. ОТРИСОВКА ХОЛСТА И ДАННЫХ =================
+  // ================= 3. RENDER & CANVAS PIPELINE =================
   const cvs = document.getElementById('reactor-canvas');
   const ctx = cvs.getContext('2d');
   const CX = 240, CY = 240, R = 150, LW = 36;
+  const R2 = 186, LW2 = 18;
+  const R3 = 212, LW3 = 18;
   const START = -Math.PI / 2;
 
-  function render() {
-    const t = state.task;
-    const tot = state.n_ctx || 123136;
-    document.getElementById('hdr-ctx').innerText = tot.toLocaleString();
+  let anim = { cached: 0, delta: 0, gen: 0, total: 0 };
+  let target = { cached: 0, delta: 0, gen: 0, total: 0 };
+  let animRunning = false;
+  function kick() { if (!animRunning) { animRunning = true; requestAnimationFrame(frame); } }
 
-    // Отрисовка бублика
+  let ringModel = { cp: { marks: [], count: 0, max: null, state: 'na' }, ram: { items: [], k: 1, used: null, limit: null, tokensUsed: 0, limitTokens: null, state: 'na' }, until: 0 };
+  let lastRingHash = '';
+
+  function stepEasing() {
+    anim.cached += (target.cached - anim.cached) * 0.15;
+    anim.delta += (target.delta - anim.delta) * 0.15;
+    anim.gen += (target.gen - anim.gen) * 0.15;
+    anim.total = target.total || 0;
+    const settled = Math.abs(anim.cached - target.cached) < 0.5 && Math.abs(anim.delta - target.delta) < 0.5 && Math.abs(anim.gen - target.gen) < 0.5;
+    if (settled) { anim.cached = target.cached; anim.delta = target.delta; anim.gen = target.gen; }
+    return settled;
+  }
+
+  function paintRing2(cp, now) {
+    let until = 0;
+    const half = Math.max(0.006, 3 / R2);
+    ctx.lineWidth = LW2; ctx.strokeStyle = '#151e2b';
+    ctx.beginPath(); ctx.arc(CX, CY, R2, 0, Math.PI * 2); ctx.stroke();
+    for (const m of cp.marks) {
+      if (m.frac == null) continue;
+      const a = START + m.frac * Math.PI * 2;
+      if (m.removedAt) {
+        const death = clamp01((now - m.removedAt) / FX.death);
+        if (death < 1) {
+          ctx.globalAlpha = 1 - death; ctx.strokeStyle = '#64748b';
+          ctx.beginPath(); ctx.arc(CX, CY, R2 + death * 6, a - half, a + half); ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        continue;
+      }
+      const f = fx(m, now);
+      if (f.until > until) until = f.until;
+      ctx.strokeStyle = f.touch > 0 ? '#22c55e' : '#14b8a6';
+      ctx.beginPath(); ctx.arc(CX, CY, R2 + f.born * 6, a - half, a + half); ctx.stroke();
+      if (f.touch > 0) {
+        const grad = ctx.createLinearGradient(CX + Math.cos(a) * R2, CY + Math.sin(a) * R2, CX + Math.cos(a) * R, CY + Math.sin(a) * R);
+        grad.addColorStop(0, 'rgba(20, 184, 166, 0.8)'); grad.addColorStop(1, 'rgba(34, 197, 94, 0)');
+        ctx.strokeStyle = grad; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(CX + Math.cos(a) * R, CY + Math.sin(a) * R); ctx.lineTo(CX + Math.cos(a) * R2, CY + Math.sin(a) * R2); ctx.stroke();
+        ctx.lineWidth = LW2;
+      }
+    }
+    return until;
+  }
+
+  function paintRing3(ram, now) {
+    ctx.lineWidth = LW3; ctx.strokeStyle = '#151e2b';
+    ctx.beginPath(); ctx.arc(CX, CY, R3, 0, Math.PI * 2); ctx.stroke();
+    const layout = computeRing3Layout(ram, now, true);
+    for (const seg of layout.arcs) {
+      if (seg.len <= 0.0005) continue;
+      const a0 = START + seg.start * Math.PI * 2;
+      ctx.strokeStyle = '#38bdf8';
+      ctx.beginPath(); ctx.arc(CX, CY, R3, a0, a0 + seg.len * Math.PI * 2); ctx.stroke();
+    }
+    return layout.until;
+  }
+
+  function paintAll(now) {
+    let until = 0;
     ctx.clearRect(0, 0, 480, 480);
-    ctx.lineWidth = LW;
-    ctx.strokeStyle = '#151e2b';
+    ctx.lineWidth = LW; ctx.strokeStyle = '#151e2b';
     ctx.beginPath(); ctx.arc(CX, CY, R, 0, Math.PI * 2); ctx.stroke();
+    const tot = anim.total > 0 ? anim.total : 1;
+    const cA = (anim.cached / tot) * Math.PI * 2;
+    const dA = (anim.delta / tot) * Math.PI * 2;
+    const gA = (anim.gen / tot) * Math.PI * 2;
+    if (anim.cached > 2) { ctx.strokeStyle = '#22c55e'; ctx.beginPath(); ctx.arc(CX, CY, R, START, START + cA); ctx.stroke(); }
+    if (anim.delta > 2) { ctx.strokeStyle = '#eab308'; ctx.beginPath(); ctx.arc(CX, CY, R, START + cA, START + cA + dA); ctx.stroke(); }
+    if (anim.gen > 2) { ctx.strokeStyle = '#a855f7'; ctx.beginPath(); ctx.arc(CX, CY, R, START + cA + dA, START + cA + dA + gA); ctx.stroke(); }
+    until = Math.max(until, paintRing2(ringModel.cp, now));
+    until = Math.max(until, paintRing3(ringModel.ram, now));
+    return until;
+  }
 
-    const cachedAngle = (t.kvRestoredTokens / tot) * (Math.PI * 2);
-    const deltaAngle = (t.deltaTokens / tot) * (Math.PI * 2);
-    const genAngle = (t.generatedTokens / tot) * (Math.PI * 2);
+  function frame() {
+    const now = Date.now();
+    const settled = stepEasing();
+    const until = paintAll(now);
+    if (settled && now >= until) { animRunning = false; return; }
+    requestAnimationFrame(frame);
+  }
 
-    if (t.kvRestoredTokens > 0) {
-      ctx.strokeStyle = '#22c55e'; ctx.beginPath();
-      ctx.arc(CX, CY, R, START, START + cachedAngle); ctx.stroke();
-    }
-    if (t.deltaTokens > 0) {
-      ctx.strokeStyle = '#eab308'; ctx.beginPath();
-      ctx.arc(CX, CY, R, START + cachedAngle, START + cachedAngle + deltaAngle); ctx.stroke();
-    }
-    if (t.generatedTokens > 0) {
-      ctx.strokeStyle = '#a855f7'; ctx.beginPath();
-      ctx.arc(CX, CY, R, START + cachedAngle + deltaAngle, START + cachedAngle + deltaAngle + genAngle); ctx.stroke();
-    }
+  function scheduleRender() {
+    const t = state.task;
+    const totalCtx = state.n_ctx || 124672;
+    document.getElementById('hdr-ctx').innerText = totalCtx.toLocaleString();
+    target.total = totalCtx;
+    target.cached = t.kvRestoredTokens || 0;
+    target.delta = t.deltaTokens || 0;
+    target.gen = t.generatedTokens || 0;
+    kick();
 
-    // Тексты в центре
-    const totalUsed = t.kvRestoredTokens + t.deltaTokens + t.generatedTokens;
-    document.getElementById('core-phase').innerText = state.currentStage;
-    document.getElementById('core-speed').innerText = state.currentStage === 'DECODE' ? `${t.decodeTps.toFixed(1)} t/s` : (state.currentStage === 'PREFILL' ? `${t.prefillProgress}%` : '—');
-    document.getElementById('core-pct').innerText = `${totalUsed.toLocaleString()} / ${(tot/1000).toFixed(0)}k (${((totalUsed/tot)*100).toFixed(1)}%)`;
+    const model = buildRingModel(state);
+    const hash = JSON.stringify(model);
+    if (hash !== lastRingHash) { lastRingHash = hash; ringModel = model; kick(); }
 
-    // Значения
+    const st = state.currentStage;
+    document.getElementById('core-phase').innerText = st;
+    document.getElementById('core-phase').className = 'phase-badge phase-' + st;
+    document.getElementById('core-speed').innerText = st === 'DECODE' ? `${t.decodeTps.toFixed(1)} t/s` : (st === 'PREFILL' ? `${t.prefillProgress}%` : '—');
+    document.getElementById('core-bottleneck').innerText = st === 'PREFILL' ? 'GEMM / COMPUTE BOUND' : (st === 'DECODE' ? 'GEMV / MEMORY BOUND' : 'IDLE');
+
+    const totUsed = (t.kvRestoredTokens||0) + (t.deltaTokens||0) + (t.generatedTokens||0);
+    document.getElementById('core-pct').innerText = `CTX: ${totUsed.toLocaleString()} (${((totUsed/totalCtx)*100).toFixed(1)}%)`;
+
     document.getElementById('val-input').innerText = t.totalPrompt.toLocaleString();
     document.getElementById('val-cached').innerText = t.kvRestoredTokens.toLocaleString();
     document.getElementById('val-delta').innerText = t.deltaTokens.toLocaleString();
     document.getElementById('val-gen').innerText = t.generatedTokens.toLocaleString();
+    document.getElementById('val-free').innerText = Math.max(0, totalCtx - totUsed).toLocaleString();
     document.getElementById('legend-cp').innerText = `${state.ramCache.cpCurrent}/${state.ramCache.cpMax}`;
 
-    // Таблица истории
-    document.getElementById('hist-rows').innerHTML = state.history.map(h => `
-      <tr>
+    document.getElementById('lbl-ngram').innerText = state.ngram.accTokens ? `${state.ngram.accTokens}/${state.ngram.genTokens} (${((state.ngram.accTokens/state.ngram.genTokens)*100).toFixed(1)}%)` : '—';
+    document.getElementById('lbl-mtp-step').innerText = t.mtpMeanLen ? `${t.mtpMeanLen} ток/такт` : '—';
+
+    // MTP Bars
+    const mtpCont = document.getElementById('mtp-bars');
+    const mtp = t.mtpPosAcc || [];
+    mtpCont.innerHTML = Array.from({length: state.mtpN || 5}, (_, i) => {
+      const v = mtp[i] != null ? mtp[i] : '—';
+      return `<div class="mtp-item"><div class="mtp-col"><div class="mtp-fill" style="height:${v==='—'?0:v}%"></div></div><div>P${i+1}</div><div style="color:var(--mtp-dim)">${v}${v==='—'?'':'%'}</div></div>`;
+    }).join('');
+
+    // History Table
+    document.getElementById('hist-rows').innerHTML = state.history.map(h => {
+      const eff = h.input > 0 ? ((h.kvReuse / h.input) * 100).toFixed(1) : '0.0';
+      return `<tr id="hist-row-${h.id}">
         <td>${h.time}</td><td><b>#${h.id}</b></td>
         <td style="color:var(--input)">${h.input.toLocaleString()}</td>
         <td style="color:var(--reuse)">${h.kvReuse.toLocaleString()}</td>
+        <td><span class="${eff>=90?'badge-eff-high':eff>=70?'badge-eff-med':'badge-eff-low'}">${eff}%</span></td>
+        <td><span class="badge-lost-zero">—</span></td>
+        <td><span class="status-tag ${h.checkpointRestore?'status-ram':'status-hot'}">${h.checkpointRestore?'RAM→VRAM':'HOT VRAM'}</span></td>
+        <td><span class="skew-tag">${h.cpSkew>0?'-'+h.cpSkew:0}</span></td>
         <td style="color:var(--prefill)">${h.prefill.toLocaleString()}</td>
         <td style="color:var(--decode)">${h.decode.toLocaleString()}</td>
-        <td><b>${h.speed.toFixed(1)} t/s</b></td>
-      </tr>
-    `).join('');
+        <td style="color:var(--mtp)">${h.mtpAccepted ? `${h.mtpAccepted}/${h.mtpGenerated}` : '—'}</td>
+        <td><b>${h.speed ? h.speed.toFixed(1) + ' t/s' : '—'}</b></td>
+      </tr>`;
+    }).join('');
 
-    // Лента логов
-    document.getElementById('log-feed').innerHTML = state.events.map(e => `
-      <div class="log-row">
+    // Event Log
+    const feed = document.getElementById('log-feed');
+    feed.innerHTML = state.events.map(e => `
+      <div class="log-row ${e.stage}">
+        <span class="log-time">[${e.ts}]</span>
         <span class="tag-pill log-tag">${e.tag}</span>
         <span class="log-msg"><b>${e.title}:</b> ${e.detail}</span>
       </div>
     `).join('');
   }
 
-  // Запуск при загрузке страницы
-  startPlayback();
+  // ================= 4. ВСТРОЕННЫЙ РЕАЛЬНЫЙ ЛОГ И ПЛЕЕР =================
+  const RAW_LOG = `[2026-10-02T18:19:30.925Z] 3.43.127.950 I spec common_specu: statistics draft-mtp: #calls(b,g,a) = 2 167 92, #gen drafts = 92, #acc drafts = 90, #gen tokens = 261, #acc tokens = 250, #mean acc len = 3.72, #acc rate/pos = (0.978, 0.598, 0.457, 0.348, 0.337)
+[2026-10-02T18:19:30.926Z] 3.43.129.772 I slot release: id 0 | task 886 | stop processing: n_tokens = 74580, truncated = 0
+[2026-10-02T18:19:31.506Z] 3.43.709.829 I slot get_availabl: id 0 | task -1 | - checking sim = 0.999 (74580/74641) > 0.100
+[2026-10-02T18:19:31.507Z] 3.43.710.524 I slot operator(): id 0 | task 1072 | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = 74641
+[2026-10-02T18:19:31.507Z] 3.43.710.557 I slot operator(): id 0 | task 1072 | cached n_tokens = 74580, memory_seq_rm [74580, end)
+[2026-10-02T18:19:31.706Z] 3.43.909.642 I slot create_check: id 0 | task 1072 | created context checkpoint 16 of 32 (pos_min = 74579, pos_max = 74579, n_tokens = 74580, size = 442.661 MiB)
+[2026-10-02T18:19:35.147Z] 3.47.350.450 I slot print_timing: id 0 | task 1072 | n_gen = 124, tg = 40.69 t/s, tg_3s = 41.02 t/s
+[2026-10-02T18:19:41.250Z] 3.53.453.387 I slot print_timing: id 0 | task 1072 | n_gen = 305, tg = 33.31 t/s, tg_3s = 26.08 t/s
+[2026-10-02T18:19:43.548Z] 3.55.751.929 I slot print_timing: id 0 | task 1072 | prompt eval time = 616.78 ms / 61 tokens (98.90 tokens per second)
+[2026-10-02T18:19:43.548Z] 3.55.751.933 I slot print_timing: id 0 | task 1072 | eval time = 11424.49 ms / 396 tokens (34.57 tokens per second)
+[2026-10-02T18:19:43.548Z] 3.55.751.946 I slot print_timing: id 0 | task 1072 | draft acceptance = 0.76994 ( 251 accepted / 326 generated), mean len = 3.79
+[2026-10-02T18:19:43.549Z] 3.55.751.961 I spec common_specu: statistics draft-mtp: #acc rate/pos = (0.989, 0.646, 0.464, 0.343, 0.309)
+[2026-10-02T18:19:43.550Z] 3.55.753.768 I slot release: id 0 | task 1072 | stop processing: n_tokens = 75036, truncated = 0
+[2026-10-02T18:19:43.977Z] 3.56.181.049 I slot get_availabl: id 0 | task -1 | - checking sim = 0.999 (75036/75101) > 0.100
+[2026-10-02T18:19:43.978Z] 3.56.181.773 I slot operator(): id 0 | task 1269 | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = 75101
+[2026-10-02T18:19:43.978Z] 3.56.181.806 I slot operator(): id 0 | task 1269 | cached n_tokens = 75036, memory_seq_rm [75036, end)
+[2026-10-02T18:19:44.175Z] 3.56.378.790 I slot create_check: id 0 | task 1269 | created context checkpoint 18 of 32 (pos_min = 75035, pos_max = 75035, n_tokens = 75036, size = 444.453 MiB)
+[2026-10-02T18:19:47.694Z] 3.59.898.400 I slot print_timing: id 0 | task 1269 | n_gen = 128, tg = 41.07 t/s
+[2026-10-02T18:19:48.228Z] 4.00.431.707 I slot print_timing: id 0 | task 1269 | prompt eval time = 624.05 ms / 65 tokens (104.16 tokens per second)
+[2026-10-02T18:19:48.228Z] 4.00.431.710 I slot print_timing: id 0 | task 1269 | eval time = 3625.75 ms / 150 tokens (41.09 tokens per second)
+[2026-10-02T18:19:48.228Z] 4.00.431.723 I slot print_timing: id 0 | task 1269 | draft acceptance = 0.30685 ( 112 accepted / 365 generated), mean len = 4.86
+[2026-10-02T18:19:48.230Z] 4.00.433.569 I slot release: id 0 | task 1269 | stop processing: n_tokens = 75251, truncated = 0
+[2026-10-02T18:22:03.008Z] 6.15.212.350 I slot get_availabl: id 0 | task -1 | - checking sim = 0.996 (78199/78503) > 0.100
+[2026-10-02T18:22:03.009Z] 6.15.213.116 I slot operator(): id 0 | task 2671 | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = 78503
+[2026-10-02T18:22:03.063Z] 6.15.266.452 I slot operator(): id 0 | task 2671 | restored context checkpoint (pos_min = 78064, pos_max = 78064, n_tokens = 78065, size = 456.354 MiB)
+[2026-10-02T18:22:15.107Z] 6.27.310.609 I slot print_timing: id 0 | task 2671 | n_gen = 215, tg = 20.18 t/s
+[2026-10-02T18:22:22.339Z] 6.34.543.236 I slot print_timing: id 0 | task 2671 | prompt eval time = 1494.65 ms / 438 tokens (293.05 tokens per second)
+[2026-10-02T18:22:22.340Z] 6.34.543.239 I slot print_timing: id 0 | task 2671 | eval time = 17835.34 ms / 435 tokens (24.33 tokens per second)
+[2026-10-02T18:22:22.341Z] 6.34.545.154 I slot release: id 0 | task 2671 | stop processing: n_tokens = 78937, truncated = 0
+[2026-10-02T18:31:25.545Z] 0.02.695.461 I srv load_model: initializing, n_slots = 1, n_ctx_slot = 124672, kv_unified = 'false'
+[2026-10-02T18:31:34.964Z] 0.12.114.291 I slot get_availabl: id 0 | task -1 | selected slot by LRU, t_last = -1
+[2026-10-02T18:31:34.965Z] 0.12.114.843 I slot operator(): id 0 | task 38 | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = 80098
+[2026-10-02T18:31:34.978Z] 0.12.114.852 I slot operator(): id 0 | task 38 | cached n_tokens = 0, memory_seq_rm [0, end)
+[2026-10-02T18:31:39.664Z] 0.16.814.192 I slot print_timing: id 0 | task 38 | prompt processing, n_tokens = 4160, progress = 0.05, t = 4.30 s / 968.08 tokens per second
+[2026-10-02T18:31:53.711Z] 0.30.861.311 I slot print_timing: id 0 | task 38 | prompt processing, n_tokens = 16260, progress = 0.20, t = 18.57 s / 875.80 tokens per second
+[2026-10-02T18:31:53.790Z] 0.30.939.947 I slot create_check: id 0 | task 38 | created context checkpoint 1 of 32 (pos_min = 16259, pos_max = 16259, n_tokens = 16260, size = 213.514 MiB)
+[2026-10-02T18:32:26.591Z] 1.03.740.749 I slot print_timing: id 0 | task 38 | prompt processing, n_tokens = 39694, progress = 0.50, t = 51.41 s / 772.05 tokens per second
+[2026-10-02T18:32:26.728Z] 1.03.878.255 I slot create_check: id 0 | task 38 | created context checkpoint 5 of 32 (pos_min = 39693, pos_max = 39693, n_tokens = 39694, size = 305.589 MiB)
+[2026-10-02T18:33:39.576Z] 2.16.725.659 I slot print_timing: id 0 | task 38 | prompt processing, n_tokens = 80094, progress = 1.00, t = 124.46 s / 643.55 tokens per second
+[2026-10-02T18:33:44.140Z] 2.21.289.800 I slot print_timing: id 0 | task 38 | n_gen = 101, tg = 23.39 t/s, tg_3s = 23.63 t/s
+[2026-10-02T18:34:33.242Z] 3.10.391.796 I slot print_timing: id 0 | task 38 | n_gen = 2127, tg = 39.83 t/s, tg_3s = 52.07 t/s
+[2026-10-02T18:35:46.389Z] 4.23.538.524 I slot print_timing: id 0 | task 38 | n_gen = 4841, tg = 38.25 t/s, tg_3s = 50.67 t/s
+[2026-10-02T18:36:59.584Z] 5.36.733.831 I slot print_timing: id 0 | task 38 | n_gen = 7808, tg = 39.09 t/s, tg_3s = 36.03 t/s
+[2026-10-02T18:37:00.272Z] 5.37.422.590 I slot print_timing: id 0 | task 38 | prompt eval time = 124900.21 ms / 80098 tokens (641.30 tokens per second)
+[2026-10-02T18:37:00.273Z] 5.37.422.593 I slot print_timing: id 0 | task 38 | eval time = 200407.41 ms / 7832 tokens (39.08 tokens per second)
+[2026-10-02T18:37:00.273Z] 5.37.422.611 I slot print_timing: id 0 | task 38 | draft acceptance = 0.62386 ( 5596 accepted / 8970 generated), mean len = 4.42
+[2026-10-02T18:37:00.274Z] 5.37.424.498 I slot release: id 0 | task 38 | stop processing: n_tokens = 87929, truncated = 0`;
+
+  let lines = RAW_LOG.trim().split('\n');
+  let lineIdx = 0;
+  let isPlaying = true;
+  let speed = 10;
+  let timer = null;
+
+  function step() {
+    if (!isPlaying || lineIdx >= lines.length) return;
+    handleLine(lines[lineIdx]);
+    lineIdx++;
+    document.getElementById('p-status').innerText = `Стр. ${lineIdx} / ${lines.length}`;
+    if (lineIdx < lines.length) {
+      timer = setTimeout(step, 400 / speed);
+    } else {
+      isPlaying = false;
+      document.getElementById('p-play').innerText = '▶ Заново';
+    }
+  }
+
+  function start() { isPlaying = true; clearTimeout(timer); step(); }
+
+  document.getElementById('p-play').addEventListener('click', () => {
+    if (lineIdx >= lines.length) { lineIdx = 0; start(); document.getElementById('p-play').innerText = '⏸ Пауза'; return; }
+    isPlaying = !isPlaying;
+    document.getElementById('p-play').innerText = isPlaying ? '⏸ Пауза' : '▶ Старт';
+    if (isPlaying) step();
+  });
+
+  document.getElementById('p-restart').addEventListener('click', () => {
+    lineIdx = 0; state.events = []; state.history = []; state.task = freshTaskState(); start();
+  });
+
+  document.getElementById('p-speed').addEventListener('change', (e) => { speed = parseFloat(e.target.value); });
+
+  document.getElementById('p-file').addEventListener('change', (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = (evt) => {
+      lines = evt.target.result.split('\n').filter(Boolean);
+      lineIdx = 0; state.events = []; state.history = []; state.task = freshTaskState();
+      document.getElementById('status-badge').innerText = 'FILE: ' + f.name;
+      start();
+    };
+    r.readAsText(f);
+  });
+
+  // Инициализация Mermaid
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: false, theme: 'base', flowchart: { curve: 'linear' } });
+    mermaid.run();
+  }
+
+  // Запуск
+  start();
   </script>
 </body>
 </html>
