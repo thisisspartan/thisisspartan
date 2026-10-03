@@ -68,7 +68,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   flex-shrink: 0;
 }
 
-/* 2. ИСТОЧНИК + ПУЛЬТ */
+/* 2. ИСТОЧНИК + МИНИ-ПУЛЬТ */
 .bar-center-unit {
   display: flex;
   align-items: center;
@@ -91,7 +91,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   color: var(--dim);
   font: bold 10px inherit;
   border-radius: 3px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -100,7 +100,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 .m-btn:hover { color: var(--text); }
 
-/* Активные стили БЕЗ МИГАНИЯ И ПУЛЬСАЦИИ */
 .m-btn.on-live {
   background: rgba(34,197,94,0.12);
   border-color: rgba(34,197,94,0.5);
@@ -124,10 +123,11 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   margin: 0 2px;
 }
 
+/* ПУЛЬТ СО СТРЕЛКАМИ НАВИГАЦИИ */
 .ctl-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 .c-btn {
   background: #151e2b;
@@ -145,7 +145,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   height: 22px;
 }
 .c-btn:hover { border-color: var(--input); color: var(--input); }
-.c-btn-primary { color: var(--input); }
+.c-btn-primary { color: var(--input); font-size: 11px; }
 .c-btn-danger:hover { border-color: var(--red); color: var(--red); }
 .c-select {
   background: #151e2b;
@@ -156,9 +156,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   padding: 2px 4px;
   cursor: pointer;
   height: 22px;
+  margin-left: 2px;
 }
 
-/* 3. СПРАВА ТОЛЬКО ОШИБКА (ЕСЛИ НЕТ ОБЛАЧНОГО ФАЙЛА) */
+/* 3. СПРАВА ТОЛЬКО ОШИБКА (ЕСЛИ ОБЛАЧНЫЙ ФАЙЛ НЕ НАЙДЕН) */
 .bar-status {
   flex: 1;
   min-width: 0;
@@ -186,7 +187,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   <!-- 1. БРЕНД -->
   <div class="bar-brand">
     <span class="brand-title">LLAMA.CPP INFERENCE</span>
-    <span class="brand-sub">EDUCATIONAL MON (ONE SLOT ONLY!)</span>
+    <span class="brand-sub">EDUCATIONAL MON</span>
     <a href="https://github.com/thisisspartan/llama-log-observability" target="_blank" rel="noopener" class="gh-star-btn" title="Star on GitHub">
       <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
       <span>GitHub</span>
@@ -196,7 +197,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 2. ИСТОЧНИК + ПУЛЬТ (БЕЗ МИГАНИЯ) -->
+  <!-- 2. ИСТОЧНИК + ПУЛЬТ СО СТРЕЛКАМИ -->
   <div class="bar-center-unit">
     <div class="mode-group">
       <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
@@ -214,8 +215,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
     <div class="unit-sep"></div>
 
     <div class="ctl-group">
+      <button id="btnRestart" class="c-btn" title="Заново с самого начала">↺</button>
+      <!-- СТРЕЛКА НАЗАД: к предыдущему запросу -->
+      <button id="btnPrev" class="c-btn" title="Предыдущий запрос (шаг назад)">⏮</button>
       <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
-      <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
+      <!-- СТРЕЛКА ВПЕРЕД: к следующему запросу -->
+      <button id="btnNext" class="c-btn" title="Следующий запрос (шаг вперед)">⏭</button>
       <select id="selSpeed" class="c-select" title="Скорость воспроизведения">
         <option value="1">1x</option>
         <option value="3" selected>3x</option>
@@ -228,7 +233,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 3. ТОЛЬКО ОШИБКА 404 (ЕСЛИ ОБЛАЧНЫЙ ФАЙЛ НЕ НАЙДЕН) -->
+  <!-- 3. ОШИБКА 404 (ЕСЛИ НЕТ demo.log В GITHUB) -->
   <div class="bar-status">
     <span id="status-warn" class="status-pill-warn" style="display:none;" title="">⚠ demo.log 404</span>
   </div>
@@ -251,6 +256,7 @@ const clean = l => l.replace(/^\[[^\]]+\] /, '');
 let handler = null, liveCb = null, srv = null, DEMO = [], feedTok = 0;
 let liveDemoPaused = false;
 let currentSpeed = 3;
+let demoIdx = 0;
 
 /* ЗАГЛУШКИ NODE.JS */
 const mkRes = (status, text) => ({ ok: status >= 200 && status < 300, status, text: async () => text, json: async () => JSON.parse(text) });
@@ -326,14 +332,14 @@ function runLiveDemo() {
   $('btnPlay').textContent = '⏸';
   setMode('demo');
   srv.goLive();
-  let i = 0;
+  demoIdx = 0;
   const lines = DEMO.length > 0 ? DEMO : sample();
   (function step() {
     if (tok !== feedTok || srv.state.mode !== 'LIVE') return;
-    if (liveDemoPaused) { setTimeout(step, 200); return; }
-    if (i >= lines.length) { setTimeout(() => { if (tok === feedTok && srv.state.mode === 'LIVE') runLiveDemo(); }, 3000); return; }
-    const l = lines[i++]; liveCb(clean(l));
-    const a = tsOf(l), b = tsOf(lines[i]);
+    if (liveDemoPaused) { setTimeout(step, 150); return; }
+    if (demoIdx >= lines.length) { setTimeout(() => { if (tok === feedTok && srv.state.mode === 'LIVE') runLiveDemo(); }, 3000); return; }
+    const l = lines[demoIdx++]; liveCb(clean(l));
+    const a = tsOf(l), b = tsOf(lines[demoIdx]);
     const delay = (a !== null && b !== null) ? Math.min(Math.max(0, b - a), MAX_GAP) : 200;
     setTimeout(step, delay / currentSpeed);
   })();
@@ -361,38 +367,103 @@ async function runCloudLog() {
   }
 }
 
-// 3. СВОЙ ФАЙЛ
-function runLocalFile() {
-  feedTok++;
-  liveDemoPaused = false;
-  srv.playerFinish(true); srv.resetAll();
-  srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
-  setMode('file');
-}
-
-/* КНОПКИ */
-$('mDemo').onclick = runLiveDemo;
-$('mCloud').onclick = runCloudLog;
-
-// Загрузка файла через проводник
+/* ЗАГРУЗКА СВОЕГО ФАЙЛА (СРАЗУ СТАРТУЕТ БЕЗ ПЕРЕЗАГРУЗОК) */
 $('fInput').onchange = (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
   const r = new FileReader();
-  r.onload = (evt) => {
+  r.onload = async (evt) => {
     const text = String(evt.target.result || '');
-    call('/api/load-log', { method: 'POST', body: text }).then(res => {
-      if (res.ok) {
-        runLocalFile();
-        $('btnPlay').textContent = '⏸';
-      } else {
-        alert('Ошибка формата лога. Нужны строки [ISO].');
-      }
-    });
+    feedTok++; // глушим LIVE DEMO
+    liveDemoPaused = false;
+    
+    // Передаем файл в движок — он сам делает resetAll и playerStart
+    const res = await call('/api/load-log', { method: 'POST', body: text });
+    if (res.ok) {
+      setMode('file');
+      $('btnPlay').textContent = '⏸';
+      // Сразу выставляем текущую скорость
+      if (srv.playerSetSpeed) srv.playerSetSpeed(currentSpeed);
+    } else {
+      alert('Ошибка формата лога. Нужны строки с временными метками [ISO].');
+    }
   };
   r.readAsText(f);
   e.target.value = '';
 };
+
+/* СТРЕЛКИ НАВИГАЦИИ (В РЕЖИМАХ ДЕМО И ФАЙЛА) */
+function pauseAll() {
+  liveDemoPaused = true;
+  if (srv && srv.playerPause) srv.playerPause();
+  $('btnPlay').textContent = '▶';
+}
+
+// ⏭ СЛЕДУЮЩИЙ ЗАПРОС (ШАГ ВПЕРЕД)
+$('btnNext').onclick = () => {
+  pauseAll();
+  if (srv.state.mode === 'LIVE') {
+    const lines = DEMO.length > 0 ? DEMO : sample();
+    if (demoIdx >= lines.length) return;
+    let nextI = demoIdx + 1;
+    while (nextI < lines.length && !lines[nextI].includes('eval time =') && !lines[nextI].includes('new prompt,')) {
+      nextI++;
+    }
+    if (nextI < lines.length) nextI++;
+    while (demoIdx < nextI && demoIdx < lines.length) {
+      liveCb(clean(lines[demoIdx++]));
+    }
+  } else if (srv.player && srv.player.lines) {
+    const lines = srv.player.lines;
+    if (srv.player.idx >= lines.length) return;
+    let nextIdx = srv.player.idx + 1;
+    while (nextIdx < lines.length && !lines[nextIdx].includes('eval time =') && !lines[nextIdx].includes('new prompt,')) {
+      nextIdx++;
+    }
+    if (nextIdx < lines.length) nextIdx++;
+    while (srv.player.idx < nextIdx && srv.player.idx < lines.length) {
+      srv.feedLogLine(lines[srv.player.idx++]);
+    }
+    srv.updatePlayerState();
+  }
+};
+
+// ⏮ ПРЕДЫДУЩИЙ ЗАПРОС (ШАГ НАЗАД)
+$('btnPrev').onclick = () => {
+  pauseAll();
+  if (srv.state.mode === 'LIVE') {
+    const lines = DEMO.length > 0 ? DEMO : sample();
+    if (demoIdx <= 1) return;
+    let prevI = Math.max(0, demoIdx - 2);
+    while (prevI > 0 && !lines[prevI].includes('new prompt,')) {
+      prevI--;
+    }
+    srv.goLive();
+    let k = 0;
+    while (k < prevI && k < lines.length) {
+      liveCb(clean(lines[k++]));
+    }
+    demoIdx = k;
+  } else if (srv.player && srv.player.lines) {
+    const lines = srv.player.lines;
+    if (srv.player.idx <= 1) return;
+    let prevIdx = Math.max(0, srv.player.idx - 2);
+    while (prevIdx > 0 && !lines[prevIdx].includes('new prompt,')) {
+      prevIdx--;
+    }
+    srv.resetAll();
+    let k = 0;
+    while (k < prevIdx && k < lines.length) {
+      srv.feedLogLine(lines[k++]);
+    }
+    srv.player.idx = k;
+    srv.updatePlayerState();
+  }
+};
+
+/* КНОПКИ */
+$('mDemo').onclick = runLiveDemo;
+$('mCloud').onclick = runCloudLog;
 
 // Плей / Пауза
 $('btnPlay').onclick = () => {
@@ -401,8 +472,13 @@ $('btnPlay').onclick = () => {
     $('btnPlay').textContent = liveDemoPaused ? '▶' : '⏸';
   } else {
     const isPaused = srv.state.player && srv.state.player.paused;
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: isPaused ? 'resume' : 'pause' }) });
-    $('btnPlay').textContent = isPaused ? '⏸' : '▶';
+    if (isPaused) {
+      if (srv.playerResume) srv.playerResume();
+      $('btnPlay').textContent = '⏸';
+    } else {
+      if (srv.playerPause) srv.playerPause();
+      $('btnPlay').textContent = '▶';
+    }
   }
 };
 
@@ -411,15 +487,16 @@ $('btnRestart').onclick = () => {
   if (srv.state.mode === 'LIVE') {
     runLiveDemo();
   } else {
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'restart' }) });
+    if (srv.playerRestart) srv.playerRestart();
+    $('btnPlay').textContent = '⏸';
   }
 };
 
 // Скорость
 $('selSpeed').onchange = (e) => {
   currentSpeed = parseFloat(e.target.value) || 1;
-  if (srv.state.mode !== 'LIVE') {
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'speed', speed: currentSpeed }) });
+  if (srv.state.mode !== 'LIVE' && srv.playerSetSpeed) {
+    srv.playerSetSpeed(currentSpeed);
   }
 };
 
@@ -470,8 +547,9 @@ function sample() {
     }
   }
 
+  // Экспортируем внутренние функции плеера напрямую в srv
   srv = new Function('require', 'process', 'Buffer', 'fetch',
-    src + '\n;return {state,resetAll,goLive,playerFinish,updatePlayerState,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
+    src + '\n;return {state,resetAll,goLive,playerFinish,playerPause,playerResume,playerRestart,playerSetSpeed,updatePlayerState,feedLogLine,player,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
 
   DEMO = sample();
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
