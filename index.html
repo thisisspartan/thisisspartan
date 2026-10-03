@@ -19,92 +19,85 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
 
-/* ВЕРХНЯЯ ПАНЕЛЬ: ВЫСОТА 60px ПОД ДВА РЯДА В ЦЕНТРЕ */
+/* ОДНА ТОНКАЯ СТРОКА: 38px */
 #bar {
-  height: 60px;
+  height: 38px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 10px;
+  padding: 0 12px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
 
-/* 1. БРЕНД СЛЕВА */
+/* ОСТРОВ 1: БРЕНД СЛЕВА */
 .bar-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
-.brand-text-box {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
 .brand-title { font-size: 11px; font-weight: 800; color: var(--input); letter-spacing: 0.5px; }
-.brand-sub { font-size: 9px; font-weight: 700; color: #f1f5f9; }
-.brand-sub small { color: var(--dim); }
+.brand-sub { font-size: 9px; font-weight: 700; color: var(--dim); }
 
 .gh-star-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   background: #151e2b;
   border: 1px solid var(--border);
   color: var(--text);
   text-decoration: none;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: bold;
-  padding: 3px 7px;
-  border-radius: 5px;
+  padding: 2px 6px;
+  border-radius: 4px;
   transition: all 0.2s ease;
+  line-height: 1;
 }
 .gh-star-btn:hover { border-color: var(--warn); color: #fff; }
 .gh-star-btn svg { color: var(--warn); flex-shrink: 0; }
-.gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9.5px; }
+.gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9px; }
 
-/* ВЕРТИКАЛЬНЫЕ РАЗДЕЛИТЕЛИ */
+/* РАЗДЕЛИТЕЛЬ */
 .bar-sep {
   width: 1px;
-  height: 38px;
+  height: 18px;
   background: var(--border);
   flex-shrink: 0;
 }
 
-/* 2. ЦЕНТРАЛЬНЫЙ ДВУХУРОВНЕВЫЙ БЛОК: РЕЖИМЫ НАД ПУЛЬТОМ */
+/* ОСТРОВ 2: ЕДИНАЯ СВЯЗКА (ИСТОЧНИК + МИНИ-ПУЛЬТ) */
 .bar-center-unit {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
 }
 
-/* Верхний ряд: Три режима */
+/* 3 режима источника данных */
 .mode-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   background: #080d15;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 4px;
+  border-radius: 5px;
+  padding: 2px 3px;
 }
 .m-btn {
   background: transparent;
   border: 1px solid transparent;
   color: var(--dim);
   font: bold 10px inherit;
-  border-radius: 4px;
-  padding: 2px 7px;
+  border-radius: 3px;
+  padding: 2px 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   transition: all 0.2s ease;
 }
 .m-btn:hover { color: var(--text); }
@@ -129,20 +122,28 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 
 .dot-pulse {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--reuse);
-  box-shadow: 0 0 6px var(--reuse);
+  box-shadow: 0 0 5px var(--reuse);
   animation: pulse 1.5s infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-/* Нижний ряд: Кнопки плеера строго под режимами */
+/* Мини-разделитель между режимами и кнопками плеера */
+.unit-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+  margin: 0 2px;
+}
+
+/* Компактный пульт: только функциональные иконки */
 .ctl-group {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .c-btn {
   background: #151e2b;
@@ -150,12 +151,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   color: var(--text);
   font: bold 10.5px inherit;
   border-radius: 4px;
-  padding: 2px 7px;
+  padding: 2px 6px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   transition: all 0.2s ease;
+  min-width: 24px;
+  height: 22px;
 }
 .c-btn:hover { border-color: var(--input); color: var(--input); }
 .c-btn-primary { color: var(--input); }
@@ -164,26 +167,43 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   background: #151e2b;
   border: 1px solid var(--border);
   color: var(--text);
-  font: bold 10.5px inherit;
+  font: bold 10px inherit;
   border-radius: 4px;
-  padding: 2px 5px;
+  padding: 2px 4px;
   cursor: pointer;
+  height: 22px;
 }
 
-/* 3. СТАТУС СПРАВА (ДВУХУРОВНЕВЫЙ) */
-.bar-info {
+/* ОСТРОВ 3: КОМПАКТНЫЙ СТАТУС СПРАВА */
+.bar-status {
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-end;
-  gap: 2px;
-  font-size: 11px;
-  line-height: 1.2;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  overflow: hidden;
 }
-#hint { color: var(--dim); }
-#note { color: var(--warn); font-weight: bold; font-size: 10.5px; }
+
+.status-pill {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+.status-pill-live { background: rgba(34,197,94,0.12); color: var(--reuse); border: 1px solid rgba(34,197,94,0.3); }
+.status-pill-cloud { background: rgba(234,179,8,0.12); color: var(--warn); border: 1px solid rgba(234,179,8,0.3); }
+.status-pill-file { background: rgba(56,189,248,0.12); color: var(--input); border: 1px solid rgba(56,189,248,0.3); }
+
+/* Аккуратный бейдж ошибки со спрятанным тултипом */
+.status-pill-warn {
+  background: rgba(234,179,8,0.2);
+  color: var(--warn);
+  border: 1px solid var(--warn);
+  cursor: help;
+}
 
 #app { flex: 1; width: 100%; border: 0; min-height: 0; }
 </style>
@@ -191,14 +211,12 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 <body>
 
 <div id="bar">
-  <!-- ЛЕВО: Бренд + GitHub -->
+  <!-- 1. ИДЕНТИЧНОСТЬ -->
   <div class="bar-brand">
-    <div class="brand-text-box">
-      <span class="brand-title">LLAMA.CPP INFERENCE</span>
-      <span class="brand-sub">EDUCATIONAL MON <small>(ONE SLOT)</small></span>
-    </div>
+    <span class="brand-title">LLAMA.CPP INFERENCE</span>
+    <span class="brand-sub">EDUCATIONAL MON</span>
     <a href="https://github.com/thisisspartan/llama-log-observability" target="_blank" rel="noopener" class="gh-star-btn" title="Star on GitHub">
-      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
       <span>GitHub</span>
       <span id="gh-stars" class="gh-star-count">★</span>
     </a>
@@ -206,22 +224,26 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- ЦЕНТР: ДВУХУРОВНЕВЫЙ ПУЛЬТ (РЕЖИМЫ СВЕРХУ, ПЛЕЕР СНИЗУ) -->
+  <!-- 2. ИСТОЧНИК + МИНИ-ПУЛЬТ (В ОДНУ ЛИНИЮ) -->
   <div class="bar-center-unit">
-    <!-- Верхний ряд: 3 режима -->
+    <!-- Источник данных -->
     <div class="mode-group">
       <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
         <span class="dot-pulse"></span> LIVE DEMO
       </button>
-      <button id="mCloud" class="m-btn" title="Лог из репозитория llama-log-observability">
-        ☁ ОБЛАЧНЫЙ ЛОГ
+      <button id="mCloud" class="m-btn" title="Лог из GitHub (demo.log)">
+        ☁ GITHUB ЛОГ
       </button>
-      <button id="mLocal" class="m-btn" title="Загрузить свой файл с компьютера">
+      <!-- Клик сразу открывает проводник файлов! -->
+      <label class="m-btn" style="cursor:pointer;" title="Открыть свой .log файл с компьютера">
         📁 СВОЙ ФАЙЛ
-      </button>
+        <input type="file" id="fInput" accept=".log,.txt" style="display:none">
+      </label>
     </div>
 
-    <!-- Нижний ряд: Кнопки плеера строго под режимами -->
+    <div class="unit-sep"></div>
+
+    <!-- Пульт (только лаконичные иконки) -->
     <div class="ctl-group">
       <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
       <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
@@ -231,20 +253,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
         <option value="10">10x</option>
         <option value="50">50x</option>
       </select>
-      <label class="c-btn" style="cursor:pointer;" title="Выбрать свой .log файл">
-        📂 <span>Файл</span>
-        <input type="file" id="fInput" accept=".log,.txt" style="display:none">
-      </label>
-      <button id="btnClear" class="c-btn c-btn-danger" title="Очистить лог и историю">🗑 <span>Очистить</span></button>
+      <button id="btnClear" class="c-btn c-btn-danger" title="Очистить лог и историю">🗑</button>
     </div>
   </div>
 
   <div class="bar-sep"></div>
 
-  <!-- ПРАВО: ДВУХУРОВНЕВЫЙ СТАТУС -->
-  <div class="bar-info">
-    <div id="hint">загрузка…</div>
-    <div id="note"></div>
+  <!-- 3. АККУРАТНЫЙ СТАТУС (БЕЗ ДЛИННЫХ ССЫЛОК) -->
+  <div class="bar-status">
+    <span id="status-pill" class="status-pill status-pill-live">● LIVE STREAM</span>
+    <span id="status-warn" class="status-pill status-pill-warn" style="display:none;" title="">⚠ demo.log 404</span>
   </div>
 </div>
 
@@ -266,7 +284,7 @@ let handler = null, liveCb = null, srv = null, DEMO = [], feedTok = 0;
 let liveDemoPaused = false;
 let currentSpeed = 3;
 
-/* ---------- ЗАГЛУШКИ NODE.JS ДЛЯ WWW.JS ---------- */
+/* ЗАГЛУШКИ NODE.JS */
 const mkRes = (status, text) => ({ ok: status >= 200 && status < 300, status, text: async () => text, json: async () => JSON.parse(text) });
 const nodeShim = {
   http: { createServer(h) { handler = h; return { listen(p, host, cb) { if (cb) cb(); }, on() {} }; } },
@@ -286,7 +304,7 @@ const engFetch = (u) => {
   return Promise.resolve(mkRes(404, ''));
 };
 
-/* ---------- ВИРТУАЛЬНЫЙ РОУТЕР ДЛЯ IFRAME ---------- */
+/* ВИРТУАЛЬНЫЙ РОУТЕР */
 function call(url, opt) {
   return new Promise(resolve => {
     opt = opt || {};
@@ -311,27 +329,38 @@ window.__SRV = {
   }
 };
 
-/* СКРЫВАЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME ЧЕРЕЗ ИНЖЕКТ CSS */
+/* ПРЯЧЕМ ДУБЛИРУЮЩИЙ ТУЛБАР В IFRAME */
 const IFRAME_SHIM = '<style>.ctl-bar{display:none !important;}</style>' +
   '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
   'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
   'setTimeout(function(){P.sse(u,function(m){if(es.onmessage)es.onmessage({data:m})});if(es.onopen)es.onopen()},0)};})();<\/script>';
 
-/* ---------- УПРАВЛЕНИЕ 3 РЕЖИМАМИ ---------- */
-function setMode(mode, label, warningText) {
+/* УПРАВЛЕНИЕ РЕЖИМАМИ И БЕЙДЖАМИ */
+function setMode(mode, pillText, pillClass, warnText, warnTooltip) {
   $('mDemo').className = 'm-btn ' + (mode === 'demo' ? 'on-live' : '');
   $('mCloud').className = 'm-btn ' + (mode === 'cloud' ? 'on-cloud' : '');
-  $('mLocal').className = 'm-btn ' + (mode === 'local' ? 'on-file' : '');
-  $('hint').textContent = label;
-  $('note').textContent = warningText || '';
+  $('fInput').parentElement.className = 'm-btn ' + (mode === 'file' ? 'on-file' : '');
+  
+  const p = $('status-pill');
+  p.textContent = pillText;
+  p.className = 'status-pill ' + pillClass;
+
+  const w = $('status-warn');
+  if (warnText) {
+    w.textContent = warnText;
+    w.title = warnTooltip || '';
+    w.style.display = 'inline-block';
+  } else {
+    w.style.display = 'none';
+  }
 }
 
-// 1. РЕЖИМ: LIVE DEMO (ВСТРОЕННЫЙ ПОТОК ПО УМОЛЧАНИЮ)
+// 1. LIVE DEMO
 function runLiveDemo() {
   const tok = ++feedTok;
   liveDemoPaused = false;
   $('btnPlay').textContent = '⏸';
-  setMode('demo', 'Режим: LIVE DEMO (симуляция потока)');
+  setMode('demo', '● LIVE STREAM', 'status-pill-live');
   srv.goLive();
   let i = 0;
   const lines = DEMO.length > 0 ? DEMO : sample();
@@ -346,11 +375,10 @@ function runLiveDemo() {
   })();
 }
 
-// 2. РЕЖИМ: ОБЛАЧНЫЙ ЛОГ (ИЗ РЕПОЗИТОРИЯ)
+// 2. ОБЛАЧНЫЙ ЛОГ ИЗ GITHUB
 async function runCloudLog() {
   feedTok++;
-  $('hint').textContent = 'Загрузка demo.log из GitHub…';
-  $('note').textContent = '';
+  setMode('cloud', '☁ GITHUB…', 'status-pill-cloud');
 
   try {
     const res = await realFetch(CLOUD_LOG_URL, { cache: 'no-store' });
@@ -360,62 +388,31 @@ async function runCloudLog() {
     if (!lines.some(x => tsOf(x) !== null)) throw new Error('нет меток [ISO]');
 
     await call('/api/load-log', { method: 'POST', body: text });
-    setMode('cloud', 'Облачный лог: demo.log из GitHub');
+    setMode('cloud', '☁ GITHUB demo.log', 'status-pill-cloud');
     $('btnPlay').textContent = '⏸';
   } catch (err) {
-    // ЕСЛИ НЕТ — ВЫВОДИМ ЖЕЛТЫЙ ПУТЬ И ЧТО ОТСУТСТВУЕТ!
+    // Компактный бейдж ошибки, а полный URL спрятан в подсказку (тултип)
     srv.playerFinish(true); srv.resetAll();
-    setMode('cloud', 'Режим: ОБЛАЧНЫЙ ЛОГ', '⚠ ' + CLOUD_LOG_URL.split('?')[0] + ' не найден');
+    const cleanUrl = CLOUD_LOG_URL.split('?')[0];
+    setMode('cloud', '☁ ОБЛАКО (ПУСТО)', 'status-pill-cloud', '⚠ demo.log 404', 'Файл не найден в репозитории: ' + cleanUrl);
   }
 }
 
-// 3. РЕЖИМ: СВОЙ ЛОКАЛЬНЫЙ ФАЙЛ
+// 3. СВОЙ ФАЙЛ С КОМПЬЮТЕРА
 function runLocalFile(customName) {
   feedTok++;
   liveDemoPaused = false;
   srv.playerFinish(true); srv.resetAll();
   srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
-  setMode('local', customName ? 'Файл: ' + customName : 'Режим: СВОЙ ФАЙЛ (выберите .log через кнопку «Файл»)');
+  const label = customName ? '📁 ' + customName : '📁 СВОЙ ФАЙЛ';
+  setMode('file', label, 'status-pill-file');
 }
 
-/* ---------- ОБРАБОТЧИКИ НАЖАТИЙ ---------- */
+/* КНОПКИ */
 $('mDemo').onclick = runLiveDemo;
 $('mCloud').onclick = runCloudLog;
-$('mLocal').onclick = () => {
-  runLocalFile();
-  $('fInput').click(); // сразу открывает окно выбора файла с диска
-};
 
-// ПАУЗА / СТАРТ
-$('btnPlay').onclick = () => {
-  if (srv.state.mode === 'LIVE') {
-    liveDemoPaused = !liveDemoPaused;
-    $('btnPlay').textContent = liveDemoPaused ? '▶' : '⏸';
-  } else {
-    const isPaused = srv.state.player && srv.state.player.paused;
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: isPaused ? 'resume' : 'pause' }) });
-    $('btnPlay').textContent = isPaused ? '⏸' : '▶';
-  }
-};
-
-// ЗАНОВО
-$('btnRestart').onclick = () => {
-  if (srv.state.mode === 'LIVE') {
-    runLiveDemo();
-  } else {
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'restart' }) });
-  }
-};
-
-// СКОРОСТЬ
-$('selSpeed').onchange = (e) => {
-  currentSpeed = parseFloat(e.target.value) || 1;
-  if (srv.state.mode !== 'LIVE') {
-    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'speed', speed: currentSpeed }) });
-  }
-};
-
-// ВЫБОР ФАЙЛА С КОМПЬЮТЕРА
+// Загрузка файла через проводник
 $('fInput').onchange = (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
@@ -427,7 +424,7 @@ $('fInput').onchange = (e) => {
         runLocalFile(f.name);
         $('btnPlay').textContent = '⏸';
       } else {
-        alert('Ошибка формата. Нужен файл с логами llama-server вида [ISO] строка.');
+        alert('Ошибка формата лога. Нужны строки [ISO].');
       }
     });
   };
@@ -435,12 +432,41 @@ $('fInput').onchange = (e) => {
   e.target.value = '';
 };
 
-// ОЧИСТИТЬ
+// Плей / Пауза
+$('btnPlay').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    liveDemoPaused = !liveDemoPaused;
+    $('btnPlay').textContent = liveDemoPaused ? '▶' : '⏸';
+  } else {
+    const isPaused = srv.state.player && srv.state.player.paused;
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: isPaused ? 'resume' : 'pause' }) });
+    $('btnPlay').textContent = isPaused ? '⏸' : '▶';
+  }
+};
+
+// Заново
+$('btnRestart').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    runLiveDemo();
+  } else {
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'restart' }) });
+  }
+};
+
+// Скорость
+$('selSpeed').onchange = (e) => {
+  currentSpeed = parseFloat(e.target.value) || 1;
+  if (srv.state.mode !== 'LIVE') {
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'speed', speed: currentSpeed }) });
+  }
+};
+
+// Очистить
 $('btnClear').onclick = () => {
   call('/api/clear', { method: 'POST' });
 };
 
-/* СТРОКИ СИМУЛЯЦИИ */
+/* ОБРАЗЕЦ ИНФЕРЕНСА ДЛЯ СИМУЛЯЦИИ */
 function sample() {
   const o = []; let t = Date.parse('2026-10-03T10:00:00Z');
   const L = (s, d) => { t += d || 200; o.push('[' + new Date(t).toISOString() + '] ' + s); };
@@ -478,7 +504,7 @@ function sample() {
       if (!r2.ok) throw 0;
       src = (await r2.text()).replace(/^#!.*\n/, '');
     } catch (err) {
-      $('hint').textContent = 'Ошибка загрузки www.js'; return;
+      setMode('demo', 'ОШИБКА ЗАГРУЗКИ WWW.JS', 'status-pill-warn'); return;
     }
   }
 
@@ -488,7 +514,7 @@ function sample() {
   DEMO = sample();
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
 
-  // СРАЗУ СТАРТУЕТ LIVE DEMO ПО УМОЛЧАНИЮ
+  // СТАРТУЕТ LIVE DEMO ПО УМОЛЧАНИЮ
   setTimeout(runLiveDemo, 250);
 })();
 
