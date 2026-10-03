@@ -19,7 +19,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
 
-/* ОДНА ТОНКАЯ СТРОКА: 38px */
+/* ЧИСТАЯ СТРОКА: 38px */
 #bar {
   height: 38px;
   flex-shrink: 0;
@@ -32,7 +32,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   border-bottom: 1px solid var(--border);
 }
 
-/* ОСТРОВ 1: БРЕНД СЛЕВА */
+/* 1. БРЕНД СЛЕВА */
 .bar-brand {
   display: flex;
   align-items: center;
@@ -61,7 +61,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 .gh-star-btn svg { color: var(--warn); flex-shrink: 0; }
 .gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9px; }
 
-/* РАЗДЕЛИТЕЛЬ */
 .bar-sep {
   width: 1px;
   height: 18px;
@@ -69,7 +68,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   flex-shrink: 0;
 }
 
-/* ОСТРОВ 2: ЕДИНАЯ СВЯЗКА (ИСТОЧНИК + МИНИ-ПУЛЬТ) */
+/* 2. ИСТОЧНИК + ПУЛЬТ */
 .bar-center-unit {
   display: flex;
   align-items: center;
@@ -77,7 +76,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   flex-shrink: 0;
 }
 
-/* 3 режима источника данных */
 .mode-group {
   display: flex;
   align-items: center;
@@ -93,7 +91,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   color: var(--dim);
   font: bold 10px inherit;
   border-radius: 3px;
-  padding: 2px 6px;
+  padding: 2px 7px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -102,36 +100,23 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 .m-btn:hover { color: var(--text); }
 
+/* Активные стили БЕЗ МИГАНИЯ И ПУЛЬСАЦИИ */
 .m-btn.on-live {
   background: rgba(34,197,94,0.12);
   border-color: rgba(34,197,94,0.5);
   color: var(--reuse);
-  box-shadow: 0 0 8px rgba(34,197,94,0.2);
 }
 .m-btn.on-cloud {
   background: rgba(234,179,8,0.12);
   border-color: rgba(234,179,8,0.5);
   color: var(--warn);
-  box-shadow: 0 0 8px rgba(234,179,8,0.2);
 }
 .m-btn.on-file {
   background: rgba(56,189,248,0.12);
   border-color: rgba(56,189,248,0.5);
   color: var(--input);
-  box-shadow: 0 0 8px rgba(56,189,248,0.2);
 }
 
-.dot-pulse {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--reuse);
-  box-shadow: 0 0 5px var(--reuse);
-  animation: pulse 1.5s infinite;
-}
-@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-
-/* Мини-разделитель между режимами и кнопками плеера */
 .unit-sep {
   width: 1px;
   height: 14px;
@@ -139,7 +124,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   margin: 0 2px;
 }
 
-/* Компактный пульт: только функциональные иконки */
 .ctl-group {
   display: flex;
   align-items: center;
@@ -174,32 +158,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   height: 22px;
 }
 
-/* ОСТРОВ 3: КОМПАКТНЫЙ СТАТУС СПРАВА */
+/* 3. СПРАВА ТОЛЬКО ОШИБКА (ЕСЛИ НЕТ ОБЛАЧНОГО ФАЙЛА) */
 .bar-status {
   flex: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
-  overflow: hidden;
 }
-
-.status-pill {
+.status-pill-warn {
   font-size: 10px;
   font-weight: bold;
   padding: 2px 6px;
   border-radius: 4px;
-  white-space: nowrap;
-  letter-spacing: 0.3px;
-}
-.status-pill-live { background: rgba(34,197,94,0.12); color: var(--reuse); border: 1px solid rgba(34,197,94,0.3); }
-.status-pill-cloud { background: rgba(234,179,8,0.12); color: var(--warn); border: 1px solid rgba(234,179,8,0.3); }
-.status-pill-file { background: rgba(56,189,248,0.12); color: var(--input); border: 1px solid rgba(56,189,248,0.3); }
-
-/* Аккуратный бейдж ошибки со спрятанным тултипом */
-.status-pill-warn {
-  background: rgba(234,179,8,0.2);
+  background: rgba(234,179,8,0.15);
   color: var(--warn);
   border: 1px solid var(--warn);
   cursor: help;
@@ -211,7 +183,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 <body>
 
 <div id="bar">
-  <!-- 1. ИДЕНТИЧНОСТЬ -->
+  <!-- 1. БРЕНД -->
   <div class="bar-brand">
     <span class="brand-title">LLAMA.CPP INFERENCE</span>
     <span class="brand-sub">EDUCATIONAL MON</span>
@@ -224,17 +196,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 2. ИСТОЧНИК + МИНИ-ПУЛЬТ (В ОДНУ ЛИНИЮ) -->
+  <!-- 2. ИСТОЧНИК + ПУЛЬТ (БЕЗ МИГАНИЯ) -->
   <div class="bar-center-unit">
-    <!-- Источник данных -->
     <div class="mode-group">
       <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
-        <span class="dot-pulse"></span> LIVE DEMO
+        ● LIVE DEMO
       </button>
       <button id="mCloud" class="m-btn" title="Лог из GitHub (demo.log)">
         ☁ GITHUB ЛОГ
       </button>
-      <!-- Клик сразу открывает проводник файлов! -->
       <label class="m-btn" style="cursor:pointer;" title="Открыть свой .log файл с компьютера">
         📁 СВОЙ ФАЙЛ
         <input type="file" id="fInput" accept=".log,.txt" style="display:none">
@@ -243,7 +213,6 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
     <div class="unit-sep"></div>
 
-    <!-- Пульт (только лаконичные иконки) -->
     <div class="ctl-group">
       <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
       <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
@@ -259,10 +228,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 3. АККУРАТНЫЙ СТАТУС (БЕЗ ДЛИННЫХ ССЫЛОК) -->
+  <!-- 3. ТОЛЬКО ОШИБКА 404 (ЕСЛИ ОБЛАЧНЫЙ ФАЙЛ НЕ НАЙДЕН) -->
   <div class="bar-status">
-    <span id="status-pill" class="status-pill status-pill-live">● LIVE STREAM</span>
-    <span id="status-warn" class="status-pill status-pill-warn" style="display:none;" title="">⚠ demo.log 404</span>
+    <span id="status-warn" class="status-pill-warn" style="display:none;" title="">⚠ demo.log 404</span>
   </div>
 </div>
 
@@ -329,22 +297,18 @@ window.__SRV = {
   }
 };
 
-/* ПРЯЧЕМ ДУБЛИРУЮЩИЙ ТУЛБАР В IFRAME */
-const IFRAME_SHIM = '<style>.ctl-bar{display:none !important;}</style>' +
+/* СКРЫВАЕМ СТАРЫЙ ПОДВАЛ/ТУЛБАР В IFRAME */
+const IFRAME_SHIM = '<style>.ctl-bar, .bottom-grid, .bottom-panel { display:none !important; }</style>' +
   '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
   'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
   'setTimeout(function(){P.sse(u,function(m){if(es.onmessage)es.onmessage({data:m})});if(es.onopen)es.onopen()},0)};})();<\/script>';
 
-/* УПРАВЛЕНИЕ РЕЖИМАМИ И БЕЙДЖАМИ */
-function setMode(mode, pillText, pillClass, warnText, warnTooltip) {
+/* ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ */
+function setMode(mode, warnText, warnTooltip) {
   $('mDemo').className = 'm-btn ' + (mode === 'demo' ? 'on-live' : '');
   $('mCloud').className = 'm-btn ' + (mode === 'cloud' ? 'on-cloud' : '');
   $('fInput').parentElement.className = 'm-btn ' + (mode === 'file' ? 'on-file' : '');
   
-  const p = $('status-pill');
-  p.textContent = pillText;
-  p.className = 'status-pill ' + pillClass;
-
   const w = $('status-warn');
   if (warnText) {
     w.textContent = warnText;
@@ -355,12 +319,12 @@ function setMode(mode, pillText, pillClass, warnText, warnTooltip) {
   }
 }
 
-// 1. LIVE DEMO
+// 1. LIVE DEMO (БЕЗ МИГАНИЯ)
 function runLiveDemo() {
   const tok = ++feedTok;
   liveDemoPaused = false;
   $('btnPlay').textContent = '⏸';
-  setMode('demo', '● LIVE STREAM', 'status-pill-live');
+  setMode('demo');
   srv.goLive();
   let i = 0;
   const lines = DEMO.length > 0 ? DEMO : sample();
@@ -378,7 +342,7 @@ function runLiveDemo() {
 // 2. ОБЛАЧНЫЙ ЛОГ ИЗ GITHUB
 async function runCloudLog() {
   feedTok++;
-  setMode('cloud', '☁ GITHUB…', 'status-pill-cloud');
+  $('status-warn').style.display = 'none';
 
   try {
     const res = await realFetch(CLOUD_LOG_URL, { cache: 'no-store' });
@@ -388,24 +352,22 @@ async function runCloudLog() {
     if (!lines.some(x => tsOf(x) !== null)) throw new Error('нет меток [ISO]');
 
     await call('/api/load-log', { method: 'POST', body: text });
-    setMode('cloud', '☁ GITHUB demo.log', 'status-pill-cloud');
+    setMode('cloud');
     $('btnPlay').textContent = '⏸';
   } catch (err) {
-    // Компактный бейдж ошибки, а полный URL спрятан в подсказку (тултип)
     srv.playerFinish(true); srv.resetAll();
     const cleanUrl = CLOUD_LOG_URL.split('?')[0];
-    setMode('cloud', '☁ ОБЛАКО (ПУСТО)', 'status-pill-cloud', '⚠ demo.log 404', 'Файл не найден в репозитории: ' + cleanUrl);
+    setMode('cloud', '⚠ demo.log 404', 'Файл не найден в репозитории: ' + cleanUrl);
   }
 }
 
-// 3. СВОЙ ФАЙЛ С КОМПЬЮТЕРА
-function runLocalFile(customName) {
+// 3. СВОЙ ФАЙЛ
+function runLocalFile() {
   feedTok++;
   liveDemoPaused = false;
   srv.playerFinish(true); srv.resetAll();
   srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
-  const label = customName ? '📁 ' + customName : '📁 СВОЙ ФАЙЛ';
-  setMode('file', label, 'status-pill-file');
+  setMode('file');
 }
 
 /* КНОПКИ */
@@ -421,7 +383,7 @@ $('fInput').onchange = (e) => {
     const text = String(evt.target.result || '');
     call('/api/load-log', { method: 'POST', body: text }).then(res => {
       if (res.ok) {
-        runLocalFile(f.name);
+        runLocalFile();
         $('btnPlay').textContent = '⏸';
       } else {
         alert('Ошибка формата лога. Нужны строки [ISO].');
@@ -504,7 +466,7 @@ function sample() {
       if (!r2.ok) throw 0;
       src = (await r2.text()).replace(/^#!.*\n/, '');
     } catch (err) {
-      setMode('demo', 'ОШИБКА ЗАГРУЗКИ WWW.JS', 'status-pill-warn'); return;
+      setMode('demo', 'ОШИБКА WWW.JS'); return;
     }
   }
 
@@ -514,7 +476,6 @@ function sample() {
   DEMO = sample();
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
 
-  // СТАРТУЕТ LIVE DEMO ПО УМОЛЧАНИЮ
   setTimeout(runLiveDemo, 250);
 })();
 
