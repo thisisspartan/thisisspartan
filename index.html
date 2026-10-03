@@ -19,15 +19,15 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
 
-/* ВЕРХНЯЯ ПАНЕЛЬ */
+/* ВЕРХНЯЯ ПАНЕЛЬ: ВЫСОТА 60px ПОД ДВА РЯДА В ЦЕНТРЕ */
 #bar {
-  height: 42px;
+  height: 60px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 0 12px;
+  gap: 12px;
+  padding: 0 14px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
 }
@@ -66,15 +66,25 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 .gh-star-btn svg { color: var(--warn); flex-shrink: 0; }
 .gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9.5px; }
 
-/* РАЗДЕЛИТЕЛЬ */
+/* ВЕРТИКАЛЬНЫЕ РАЗДЕЛИТЕЛИ */
 .bar-sep {
   width: 1px;
-  height: 20px;
+  height: 38px;
   background: var(--border);
   flex-shrink: 0;
 }
 
-/* 2. ТРИ ПЛАШКИ РЕЖИМА */
+/* 2. ЦЕНТРАЛЬНЫЙ ДВУХУРОВНЕВЫЙ БЛОК: РЕЖИМЫ НАД ПУЛЬТОМ */
+.bar-center-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Верхний ряд: Три режима */
 .mode-group {
   display: flex;
   align-items: center;
@@ -83,15 +93,14 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 2px 4px;
-  flex-shrink: 0;
 }
 .m-btn {
   background: transparent;
   border: 1px solid transparent;
   color: var(--dim);
-  font: bold 10.5px inherit;
+  font: bold 10px inherit;
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 2px 7px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -100,24 +109,23 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 .m-btn:hover { color: var(--text); }
 
-/* Активное состояние для 3 плашек */
 .m-btn.on-live {
   background: rgba(34,197,94,0.12);
   border-color: rgba(34,197,94,0.5);
   color: var(--reuse);
-  box-shadow: 0 0 10px rgba(34,197,94,0.2);
+  box-shadow: 0 0 8px rgba(34,197,94,0.2);
 }
 .m-btn.on-cloud {
   background: rgba(234,179,8,0.12);
   border-color: rgba(234,179,8,0.5);
   color: var(--warn);
-  box-shadow: 0 0 10px rgba(234,179,8,0.2);
+  box-shadow: 0 0 8px rgba(234,179,8,0.2);
 }
 .m-btn.on-file {
   background: rgba(56,189,248,0.12);
   border-color: rgba(56,189,248,0.5);
   color: var(--input);
-  box-shadow: 0 0 10px rgba(56,189,248,0.2);
+  box-shadow: 0 0 8px rgba(56,189,248,0.2);
 }
 
 .dot-pulse {
@@ -130,20 +138,19 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-/* 3. КНОПКИ ПЛЕЕРА */
+/* Нижний ряд: Кнопки плеера строго под режимами */
 .ctl-group {
   display: flex;
   align-items: center;
   gap: 5px;
-  flex-shrink: 0;
 }
 .c-btn {
   background: #151e2b;
   border: 1px solid var(--border);
   color: var(--text);
-  font: bold 11px inherit;
-  border-radius: 5px;
-  padding: 3px 8px;
+  font: bold 10.5px inherit;
+  border-radius: 4px;
+  padding: 2px 7px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -157,24 +164,26 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   background: #151e2b;
   border: 1px solid var(--border);
   color: var(--text);
-  font: bold 11px inherit;
-  border-radius: 5px;
-  padding: 3px 6px;
+  font: bold 10.5px inherit;
+  border-radius: 4px;
+  padding: 2px 5px;
   cursor: pointer;
 }
 
-/* 4. СТАТУС СПРАВА */
+/* 3. СТАТУС СПРАВА (ДВУХУРОВНЕВЫЙ) */
 .bar-info {
   flex: 1;
   min-width: 0;
-  text-align: right;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 2px;
   font-size: 11px;
+  line-height: 1.2;
 }
 #hint { color: var(--dim); }
-#note { color: var(--warn); margin-left: 6px; font-weight: bold; }
+#note { color: var(--warn); font-weight: bold; font-size: 10.5px; }
 
 #app { flex: 1; width: 100%; border: 0; min-height: 0; }
 </style>
@@ -197,42 +206,45 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- ЦЕНТР 1: ТРИ ЧЕТКИХ ПЛАШКИ РЕЖИМА -->
-  <div class="mode-group">
-    <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
-      <span class="dot-pulse"></span> LIVE DEMO
-    </button>
-    <button id="mCloud" class="m-btn" title="Лог из репозитория llama-log-observability">
-      ☁ ОБЛАЧНЫЙ ЛОГ
-    </button>
-    <button id="mLocal" class="m-btn" title="Загрузить свой файл с компьютера">
-      📁 СВОЙ ФАЙЛ
-    </button>
+  <!-- ЦЕНТР: ДВУХУРОВНЕВЫЙ ПУЛЬТ (РЕЖИМЫ СВЕРХУ, ПЛЕЕР СНИЗУ) -->
+  <div class="bar-center-unit">
+    <!-- Верхний ряд: 3 режима -->
+    <div class="mode-group">
+      <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
+        <span class="dot-pulse"></span> LIVE DEMO
+      </button>
+      <button id="mCloud" class="m-btn" title="Лог из репозитория llama-log-observability">
+        ☁ ОБЛАЧНЫЙ ЛОГ
+      </button>
+      <button id="mLocal" class="m-btn" title="Загрузить свой файл с компьютера">
+        📁 СВОЙ ФАЙЛ
+      </button>
+    </div>
+
+    <!-- Нижний ряд: Кнопки плеера строго под режимами -->
+    <div class="ctl-group">
+      <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
+      <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
+      <select id="selSpeed" class="c-select" title="Скорость воспроизведения">
+        <option value="1">1x</option>
+        <option value="3" selected>3x</option>
+        <option value="10">10x</option>
+        <option value="50">50x</option>
+      </select>
+      <label class="c-btn" style="cursor:pointer;" title="Выбрать свой .log файл">
+        📂 <span>Файл</span>
+        <input type="file" id="fInput" accept=".log,.txt" style="display:none">
+      </label>
+      <button id="btnClear" class="c-btn c-btn-danger" title="Очистить лог и историю">🗑 <span>Очистить</span></button>
+    </div>
   </div>
 
   <div class="bar-sep"></div>
 
-  <!-- ЦЕНТР 2: ПУЛЬТ УПРАВЛЕНИЯ -->
-  <div class="ctl-group">
-    <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
-    <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
-    <select id="selSpeed" class="c-select" title="Скорость воспроизведения">
-      <option value="1">1x</option>
-      <option value="3" selected>3x</option>
-      <option value="10">10x</option>
-      <option value="50">50x</option>
-    </select>
-    <label class="c-btn" style="cursor:pointer;" title="Выбрать .log файл">
-      📂 <span>Файл</span>
-      <input type="file" id="fInput" accept=".log,.txt" style="display:none">
-    </label>
-    <button id="btnClear" class="c-btn c-btn-danger" title="Очистить экран">🗑 <span>Очистить</span></button>
-  </div>
-
-  <!-- ПРАВО: СТАТУСНАЯ СТРОКА И ПРЕДУПРЕЖДЕНИЕ -->
+  <!-- ПРАВО: ДВУХУРОВНЕВЫЙ СТАТУС -->
   <div class="bar-info">
-    <span id="hint">загрузка…</span>
-    <span id="note"></span>
+    <div id="hint">загрузка…</div>
+    <div id="note"></div>
   </div>
 </div>
 
@@ -299,7 +311,7 @@ window.__SRV = {
   }
 };
 
-/* СКРЫВАЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME */
+/* СКРЫВАЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME ЧЕРЕЗ ИНЖЕКТ CSS */
 const IFRAME_SHIM = '<style>.ctl-bar{display:none !important;}</style>' +
   '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
   'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
@@ -314,12 +326,12 @@ function setMode(mode, label, warningText) {
   $('note').textContent = warningText || '';
 }
 
-// 1. РЕЖИМ: LIVE DEMO (ВСТРОЕННЫЙ ПОТОК)
+// 1. РЕЖИМ: LIVE DEMO (ВСТРОЕННЫЙ ПОТОК ПО УМОЛЧАНИЮ)
 function runLiveDemo() {
   const tok = ++feedTok;
   liveDemoPaused = false;
   $('btnPlay').textContent = '⏸';
-  setMode('demo', 'Режим: LIVE DEMO (живая эмуляция)');
+  setMode('demo', 'Режим: LIVE DEMO (симуляция потока)');
   srv.goLive();
   let i = 0;
   const lines = DEMO.length > 0 ? DEMO : sample();
@@ -351,7 +363,7 @@ async function runCloudLog() {
     setMode('cloud', 'Облачный лог: demo.log из GitHub');
     $('btnPlay').textContent = '⏸';
   } catch (err) {
-    // ЕСЛИ НЕТ — ПОКАЗЫВАЕМ ЖЕЛТЫЙ ПУТЬ И ЧТО ОТСУТСТВУЕТ!
+    // ЕСЛИ НЕТ — ВЫВОДИМ ЖЕЛТЫЙ ПУТЬ И ЧТО ОТСУТСТВУЕТ!
     srv.playerFinish(true); srv.resetAll();
     setMode('cloud', 'Режим: ОБЛАЧНЫЙ ЛОГ', '⚠ ' + CLOUD_LOG_URL.split('?')[0] + ' не найден');
   }
@@ -371,7 +383,7 @@ $('mDemo').onclick = runLiveDemo;
 $('mCloud').onclick = runCloudLog;
 $('mLocal').onclick = () => {
   runLocalFile();
-  $('fInput').click(); // сразу открывает окно выбора файла на компе!
+  $('fInput').click(); // сразу открывает окно выбора файла с диска
 };
 
 // ПАУЗА / СТАРТ
@@ -476,7 +488,7 @@ function sample() {
   DEMO = sample();
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
 
-  // ПО УМОЛЧАНИЮ СРАЗУ ЗАПУСКАЕМ LIVE DEMO
+  // СРАЗУ СТАРТУЕТ LIVE DEMO ПО УМОЛЧАНИЮ
   setTimeout(runLiveDemo, 250);
 })();
 
