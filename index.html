@@ -19,7 +19,7 @@
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
 
-/* ЧИСТАЯ СТРОКА: 38px */
+/* ОДНА ЧИСТАЯ СТРОКА: 38px */
 #bar {
   height: 38px;
   flex-shrink: 0;
@@ -68,7 +68,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   flex-shrink: 0;
 }
 
-/* 2. ИСТОЧНИК + МИНИ-ПУЛЬТ */
+/* 2. ИСТОЧНИК + ПУЛЬТ */
 .bar-center-unit {
   display: flex;
   align-items: center;
@@ -100,6 +100,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 }
 .m-btn:hover { color: var(--text); }
 
+/* Активные режимы БЕЗ мигания */
 .m-btn.on-live {
   background: rgba(34,197,94,0.12);
   border-color: rgba(34,197,94,0.5);
@@ -159,7 +160,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   margin-left: 2px;
 }
 
-/* 3. СПРАВА ТОЛЬКО ОШИБКА (ЕСЛИ ОБЛАЧНЫЙ ФАЙЛ НЕ НАЙДЕН) */
+/* 3. СПРАВА ТОЛЬКО ПРЕДУПРЕЖДЕНИЕ (ЕСЛИ ОБЛАЧНЫЙ ЛОГ НЕ НАЙДЕН) */
 .bar-status {
   flex: 1;
   min-width: 0;
@@ -197,7 +198,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 2. ИСТОЧНИК + ПУЛЬТ СО СТРЕЛКАМИ -->
+  <!-- 2. ИСТОЧНИК + ПУЛЬТ СО СТРЕЛКАМИ НАВИГАЦИИ -->
   <div class="bar-center-unit">
     <div class="mode-group">
       <button id="mDemo" class="m-btn on-live" title="Живая симуляция генерации">
@@ -216,10 +217,10 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
     <div class="ctl-group">
       <button id="btnRestart" class="c-btn" title="Заново с самого начала">↺</button>
-      <!-- СТРЕЛКА НАЗАД: к предыдущему запросу -->
+      <!-- ШАГ НАЗАД К ПРЕДЫДУЩЕМУ ЗАПРОСУ -->
       <button id="btnPrev" class="c-btn" title="Предыдущий запрос (шаг назад)">⏮</button>
       <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
-      <!-- СТРЕЛКА ВПЕРЕД: к следующему запросу -->
+      <!-- ШАГ ВПЕРЕД К СЛЕДУЮЩЕМУ ЗАПРОСУ -->
       <button id="btnNext" class="c-btn" title="Следующий запрос (шаг вперед)">⏭</button>
       <select id="selSpeed" class="c-select" title="Скорость воспроизведения">
         <option value="1">1x</option>
@@ -233,7 +234,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <div class="bar-sep"></div>
 
-  <!-- 3. ОШИБКА 404 (ЕСЛИ НЕТ demo.log В GITHUB) -->
+  <!-- 3. ОШИБКА 404 (ЕСЛИ ОБЛАЧНЫЙ ФАЙЛ НЕ НАЙДЕН) -->
   <div class="bar-status">
     <span id="status-warn" class="status-pill-warn" style="display:none;" title="">⚠ demo.log 404</span>
   </div>
@@ -367,32 +368,44 @@ async function runCloudLog() {
   }
 }
 
-/* ЗАГРУЗКА СВОЕГО ФАЙЛА (СРАЗУ СТАРТУЕТ БЕЗ ПЕРЕЗАГРУЗОК) */
+// 3. ВСЕЯДНАЯ ЗАГРУЗКА ЛОКАЛЬНОГО ФАЙЛА (ИЗ ФАЙЛА ИЛИ СКОПИРОВАННОГО ИЗ КОНСОЛИ)
 $('fInput').onchange = (e) => {
   const f = e.target.files && e.target.files[0];
   if (!f) return;
   const r = new FileReader();
   r.onload = async (evt) => {
-    const text = String(evt.target.result || '');
+    let text = String(evt.target.result || '');
     feedTok++; // глушим LIVE DEMO
     liveDemoPaused = false;
-    
-    // Передаем файл в движок — он сам делает resetAll и playerStart
+
+    // ПРОВЕРКА: если лог скопирован из голой консоли без дат — расставляем таймстемпы на лету
+    let lines = text.split('\n').filter(Boolean);
+    const hasTs = lines.some(l => {
+      const m = l.match(/^\[([^\]]+)\] /);
+      return m && !Number.isNaN(Date.parse(m[1]));
+    });
+
+    if (!hasTs) {
+      let fakeTime = Date.now() - (lines.length * 150);
+      lines = lines.map((l, i) => `[${new Date(fakeTime + i * 150).toISOString()}] ${l}`);
+      text = lines.join('\n');
+    }
+
+    // Загружаем лог в движок — он сам запускает воспроизведение
     const res = await call('/api/load-log', { method: 'POST', body: text });
     if (res.ok) {
       setMode('file');
       $('btnPlay').textContent = '⏸';
-      // Сразу выставляем текущую скорость
       if (srv.playerSetSpeed) srv.playerSetSpeed(currentSpeed);
     } else {
-      alert('Ошибка формата лога. Нужны строки с временными метками [ISO].');
+      alert('Не удалось обработать лог.');
     }
   };
   r.readAsText(f);
   e.target.value = '';
 };
 
-/* СТРЕЛКИ НАВИГАЦИИ (В РЕЖИМАХ ДЕМО И ФАЙЛА) */
+/* СТРЕЛКИ НАВИГАЦИИ (ШАГ НАЗАД / ВПЕРЕД) */
 function pauseAll() {
   liveDemoPaused = true;
   if (srv && srv.playerPause) srv.playerPause();
@@ -482,7 +495,7 @@ $('btnPlay').onclick = () => {
   }
 };
 
-// Заново
+// Заново с начала
 $('btnRestart').onclick = () => {
   if (srv.state.mode === 'LIVE') {
     runLiveDemo();
@@ -547,7 +560,7 @@ function sample() {
     }
   }
 
-  // Экспортируем внутренние функции плеера напрямую в srv
+  // Экспортируем все методы управления плеером
   srv = new Function('require', 'process', 'Buffer', 'fetch',
     src + '\n;return {state,resetAll,goLive,playerFinish,playerPause,playerResume,playerRestart,playerSetSpeed,updatePlayerState,feedLogLine,player,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
 
