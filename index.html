@@ -3,45 +3,244 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Llama.cpp Canonical Engine Monitor — Replay</title>
+<title>Llama.cpp Canonical Engine Monitor — Live Demo</title>
 <style>
-html,body{margin:0;height:100%;background:#06090e;color:#f1f5f9;font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace}
-body{display:flex;flex-direction:column}
-#bar{height:36px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 12px;background:#0d131d;border-bottom:1px solid #1a2436}
-#bar b{color:#38bdf8;letter-spacing:.5px}
-#bar button{background:#151e2b;border:1px solid #1a2436;color:#f1f5f9;font:bold 11px inherit;border-radius:5px;padding:4px 10px;cursor:pointer}
-#bar button:hover{border-color:#38bdf8;color:#38bdf8}
-#bar button.on{border-color:#38bdf8;color:#38bdf8;background:#122033}
-#bar button#mLive.on{border-color:#22c55e;color:#22c55e;background:#0f2418}
-#hint{color:#64748b;font-size:11px}
-#note{color:#eab308;font-size:11px}
-#app{flex:1;width:100%;border:0;min-height:0}
+:root {
+  --bg: #06090e;
+  --panel: #0d131d;
+  --border: #1a2436;
+  --text: #f1f5f9;
+  --dim: #64748b;
+  --input: #38bdf8;
+  --reuse: #22c55e;
+  --warn: #eab308;
+  --red: #ef4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
+
+/* ВЕРХНЯЯ ПАНЕЛЬ: БРЕНД + РЕЖИМЫ + ПЛЕЕР */
+#bar {
+  height: 42px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 1. БРЕНД СЛЕВА */
+.bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.brand-text-box {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+.brand-title { font-size: 11px; font-weight: 800; color: var(--input); letter-spacing: 0.5px; }
+.brand-sub { font-size: 9px; font-weight: 700; color: #f1f5f9; }
+.brand-sub small { color: var(--dim); }
+
+.gh-star-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 7px;
+  border-radius: 5px;
+  transition: all 0.2s ease;
+}
+.gh-star-btn:hover { border-color: var(--warn); color: #fff; }
+.gh-star-btn svg { color: var(--warn); flex-shrink: 0; }
+.gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9.5px; }
+
+/* РАЗДЕЛИТЕЛЬ */
+.bar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* 2. ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА */
+.mode-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #080d15;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.m-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  font: bold 10.5px inherit;
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+.m-btn:hover { color: var(--text); }
+.m-btn.on-live {
+  background: rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.5);
+  color: var(--reuse);
+  box-shadow: 0 0 10px rgba(34,197,94,0.2);
+}
+.m-btn.on-file {
+  background: rgba(56,189,248,0.12);
+  border-color: rgba(56,189,248,0.5);
+  color: var(--input);
+  box-shadow: 0 0 10px rgba(56,189,248,0.2);
+}
+.dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--reuse);
+  box-shadow: 0 0 6px var(--reuse);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+/* 3. КНОПКИ ПЛЕЕРА */
+.ctl-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.c-btn {
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: bold 11px inherit;
+  border-radius: 5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.c-btn:hover { border-color: var(--input); color: var(--input); }
+.c-btn-primary { color: var(--input); }
+.c-btn-danger:hover { border-color: var(--red); color: var(--red); }
+.c-select {
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: bold 11px inherit;
+  border-radius: 5px;
+  padding: 3px 6px;
+  cursor: pointer;
+}
+
+/* 4. СТАТУС СПРАВА */
+.bar-info {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+#hint { color: var(--dim); }
+#note { color: var(--warn); margin-left: 6px; }
+
+#app { flex: 1; width: 100%; border: 0; min-height: 0; }
 </style>
 </head>
 <body>
+
 <div id="bar">
-  <b>LLAMA.CPP INFERENCE · REPLAY</b>
-  <button id="mLog">▤ ЛОГ</button>
-  <button id="mLive">● LIVE</button>
-  <span id="hint">загрузка…</span><span id="note"></span>
+  <!-- ЛЕВО: Бренд + GitHub -->
+  <div class="bar-brand">
+    <div class="brand-text-box">
+      <span class="brand-title">LLAMA.CPP INFERENCE</span>
+      <span class="brand-sub">EDUCATIONAL MON <small>(ONE SLOT)</small></span>
+    </div>
+    <a href="https://github.com/thisisspartan/llama-log-observability" target="_blank" rel="noopener" class="gh-star-btn" title="Star on GitHub">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+      <span>GitHub</span>
+      <span id="gh-stars" class="gh-star-count">★</span>
+    </a>
+  </div>
+
+  <div class="bar-sep"></div>
+
+  <!-- ЦЕНТР 1: ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМА -->
+  <div class="mode-group">
+    <button id="mLive" class="m-btn on-live" title="Режим живого стрима логов">
+      <span class="dot-pulse"></span> LIVE DEMO
+    </button>
+    <button id="mLog" class="m-btn" title="Воспроизведение загруженного .log файла">
+      ▤ ФАЙЛ ЛОГА
+    </button>
+  </div>
+
+  <div class="bar-sep"></div>
+
+  <!-- ЦЕНТР 2: ПУЛЬТ УПРАВЛЕНИЯ ПЛЕЕРОМ -->
+  <div class="ctl-group">
+    <button id="btnPlay" class="c-btn c-btn-primary" title="Пауза / Старт">⏸</button>
+    <button id="btnRestart" class="c-btn" title="Заново с начала">↺</button>
+    <select id="selSpeed" class="c-select" title="Скорость воспроизведения">
+      <option value="1">1x</option>
+      <option value="3" selected>3x</option>
+      <option value="10">10x</option>
+      <option value="50">50x</option>
+    </select>
+    <label class="c-btn" style="cursor:pointer;" title="Загрузить свой .log файл">
+      📂 <span>Лог</span>
+      <input type="file" id="fInput" accept=".log,.txt" style="display:none">
+    </label>
+    <button id="btnClear" class="c-btn c-btn-danger" title="Очистить лог и историю">🗑 <span>Очистить</span></button>
+  </div>
+
+  <!-- ПРАВО: СТАТУСНАЯ СТРОКА -->
+  <div class="bar-info">
+    <span id="hint">загрузка движка…</span>
+    <span id="note"></span>
+  </div>
 </div>
+
 <iframe id="app"></iframe>
+
 <script>
 'use strict';
-/* Автозагрузка напрямую из репозитория llama-log-observability:
-   www.js   — исполняемый код монитора (тянется из main)
-   demo.log — лог для демонстрации (если нет, сработает sample()) */
 const WWW_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/www.js?v=' + Date.now();
 const LOG_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/demo.log?v=' + Date.now();
-const MAX_GAP = 2500;   // мс: максимальная пауза между строками в LIVE-демо
+const MAX_GAP = 2500;
 const $ = id => document.getElementById(id);
 const realFetch = window.fetch.bind(window);
 const tsOf = l => { const m = l && l.match(/^\[([^\]]+)\] /); const t = m ? Date.parse(m[1]) : NaN; return isNaN(t) ? null : t; };
 const clean = l => l.replace(/^\[[^\]]+\] /, '');
 
 let handler = null, liveCb = null, srv = null, DEMO = [], feedTok = 0;
+let liveDemoPaused = false;
+let currentSpeed = 3;
 
-/* ---------- заглушки Node-окружения для www.js ---------- */
+/* ---------- ЗАГЛУШКИ NODE.JS ДЛЯ WWW.JS ---------- */
 const mkRes = (status, text) => ({ ok: status >= 200 && status < 300, status, text: async () => text, json: async () => JSON.parse(text) });
 const nodeShim = {
   http: { createServer(h) { handler = h; return { listen(p, host, cb) { if (cb) cb(); }, on() {} }; } },
@@ -52,7 +251,6 @@ const nodeShim = {
 const nodeRequire = n => nodeShim[n];
 const nodeProcess = { argv: ['node', 'www.js'], env: { HOME: '.' }, stdin: {}, stdout: { write() {} }, exit() {} };
 const nodeBuffer = { byteLength: s => new TextEncoder().encode(s).length, alloc: n => new Uint8Array(n) };
-// fetch внутри www.js: опрос /slots отвечает по состоянию самого движка, остальное — 404 (метрики не обязательны)
 const engFetch = (u) => {
   u = String(u);
   if (u.endsWith('/slots') && srv) {
@@ -62,9 +260,10 @@ const engFetch = (u) => {
   return Promise.resolve(mkRes(404, ''));
 };
 
-/* ---------- «сервер» для iframe: маршрутизация в обработчик www.js ---------- */
+/* ---------- ВИРТУАЛЬНЫЙ РОУТЕР ДЛЯ IFRAME ---------- */
 function call(url, opt) {
   return new Promise(resolve => {
+    opt = opt || {};
     const method = (opt.method || 'GET').toUpperCase(), h = {};
     const req = { url, method, setEncoding() {}, on(e, f) { (h[e] = h[e] || []).push(f); return req; } };
     let status = 200; const chunks = [];
@@ -78,10 +277,6 @@ window.__SRV = {
   fetch(u, o) {
     o = o || {}; u = String(u);
     if (!u.startsWith('/')) return realFetch(u, o);
-    if (u === '/api/player' && o.method === 'POST') {
-      let a = ''; try { a = JSON.parse(o.body || '{}').action; } catch (_) {}
-      if (a === 'live') { startDemo(); return Promise.resolve(mkRes(200, '{"ok":true}')); } // «⏭ В LIVE» из интерфейса
-    }
     return call(u, o);
   },
   sse(u, cb) {
@@ -89,86 +284,163 @@ window.__SRV = {
       { writeHead() {}, flushHeaders() {}, end() {}, write(c) { c = String(c); if (c.startsWith('data: ')) cb(c.slice(6).trim()); } });
   }
 };
-const IFRAME_SHIM = '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
+
+/* ПРЯЧЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME ЧЕРЕЗ ИНЖЕКТ CSS */
+const IFRAME_SHIM = '<style>.ctl-bar{display:none !important;}</style>' +
+  '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
   'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
   'setTimeout(function(){P.sse(u,function(m){if(es.onmessage)es.onmessage({data:m})});if(es.onopen)es.onopen()},0)};})();<\/script>';
 
-/* ---------- режимы ---------- */
-function enterLog() {            // ЛОГ (по умолчанию): ждёт прикрепления .log через «📂 Лог»
-  feedTok++;
-  srv.playerFinish(true); srv.resetAll();
-  srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
+/* ---------- УПРАВЛЕНИЕ РЕЖИМАМИ ---------- */
+function setModeUI(isLive, label) {
+  $('mLive').className = 'm-btn ' + (isLive ? 'on-live' : '');
+  $('mLog').className = 'm-btn ' + (!isLive ? 'on-file' : '');
+  $('hint').textContent = label;
 }
-function startDemo() {           // LIVE: зашитый лог идёт в stdin-заглушку как живой поток
+
+// РЕЖИМ 1: LIVE DEMO (ПО УМОЛЧАНИЮ)
+function startDemo() {
   const tok = ++feedTok;
+  liveDemoPaused = false;
+  $('btnPlay').textContent = '⏸';
+  setModeUI(true, 'Режим: LIVE DEMO (генерация живого потока)');
   srv.goLive();
   let i = 0;
   (function step() {
-    if (tok !== feedTok || srv.state.mode !== 'LIVE') return;   // переключили режим или прикрепили лог
-    if (i >= DEMO.length) { setTimeout(() => { if (tok === feedTok && srv.state.mode === 'LIVE') startDemo(); }, 4000); return; }
+    if (tok !== feedTok || srv.state.mode !== 'LIVE') return;
+    if (liveDemoPaused) { setTimeout(step, 200); return; }
+    if (i >= DEMO.length) { setTimeout(() => { if (tok === feedTok && srv.state.mode === 'LIVE') startDemo(); }, 3000); return; }
     const l = DEMO[i++]; liveCb(clean(l));
     const a = tsOf(l), b = tsOf(DEMO[i]);
-    setTimeout(step, (a !== null && b !== null) ? Math.min(Math.max(0, b - a), MAX_GAP) : 0);
+    const delay = (a !== null && b !== null) ? Math.min(Math.max(0, b - a), MAX_GAP) : 200;
+    setTimeout(step, delay / currentSpeed);
   })();
 }
-$('mLog').onclick = enterLog;
-$('mLive').onclick = startDemo;
-setInterval(() => {
-  if (!srv) return;
-  const live = srv.state.mode === 'LIVE';
-  $('mLive').classList.toggle('on', live); $('mLog').classList.toggle('on', !live);
-  $('hint').textContent = live ? 'LIVE: демо на зашитом логе (запись, не реальный сервер)'
-    : srv.state.mode === 'PLAYBACK' ? 'ЛОГ: воспроизведение прикреплённого файла'
-    : 'ЛОГ: нажмите «📂 Лог» внизу слева и выберите .log формата [ISO] строка';
-}, 300);
 
-/* ---------- встроенный пример на случай отсутствия demo.log ---------- */
+// РЕЖИМ 2: СВОЙ ЛОГ ИЗ ФАЙЛА
+function enterLog(customName) {
+  feedTok++;
+  liveDemoPaused = false;
+  srv.playerFinish(true); srv.resetAll();
+  srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
+  setModeUI(false, customName ? 'Файл: ' + customName : 'Режим: ФАЙЛ (прикрепите .log через кнопку «Лог»)');
+}
+
+/* ---------- ПРИВЯЗКА КНОПОК ПУЛЬТА ---------- */
+$('mLive').onclick = startDemo;
+$('mLog').onclick = () => enterLog();
+
+// ПАУЗА / СТАРТ
+$('btnPlay').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    liveDemoPaused = !liveDemoPaused;
+    $('btnPlay').textContent = liveDemoPaused ? '▶' : '⏸';
+  } else {
+    const isPaused = srv.state.player && srv.state.player.paused;
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: isPaused ? 'resume' : 'pause' }) });
+    $('btnPlay').textContent = isPaused ? '⏸' : '▶';
+  }
+};
+
+// ЗАНОВО
+$('btnRestart').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    startDemo();
+  } else {
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'restart' }) });
+  }
+};
+
+// СКОРОСТЬ
+$('selSpeed').onchange = (e) => {
+  currentSpeed = parseFloat(e.target.value) || 1;
+  if (srv.state.mode !== 'LIVE') {
+    call('/api/player', { method: 'POST', body: JSON.stringify({ action: 'speed', speed: currentSpeed }) });
+  }
+};
+
+// ЗАГРУЗКА .LOG ФАЙЛА
+$('fInput').onchange = (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = (evt) => {
+    const text = String(evt.target.result || '');
+    call('/api/load-log', { method: 'POST', body: text }).then(res => {
+      if (res.ok) {
+        enterLog(f.name);
+        $('btnPlay').textContent = '⏸';
+      } else {
+        alert('Ошибка формата лога. Нужны строки с метками времени [ISO].');
+      }
+    });
+  };
+  r.readAsText(f);
+  e.target.value = '';
+};
+
+// ОЧИСТИТЬ
+$('btnClear').onclick = () => {
+  call('/api/clear', { method: 'POST' });
+};
+
+/* СТРОКИ ПРИМЕРА ДЛЯ LIVE DEMO */
 function sample() {
   const o = []; let t = Date.parse('2026-10-03T10:00:00Z');
   const L = (s, d) => { t += d || 200; o.push('[' + new Date(t).toISOString() + '] ' + s); };
   L("srv load_model: initializing, n_slots = 1, n_ctx_slot = 124672, kv_unified = 'false'");
   let prev = 0;
-  for (let k = 1; k <= 9; k++) {
-    const id = k * 3, n = 6000 + k * 1500, re = k === 1 ? 0 : prev, d = n - re, p = 'slot update_slots: id 0 | task ' + id + ' | ';
-    if (k === 1) L('slot get_availabl: id 0 | task -1 | selected slot by LRU, t_last = -1', 1500);
-    else L('slot get_availabl: id 0 | task -1 | checking sim = 0.9' + (60 + k) + ' (' + re + '/' + n + ')', 1500);
+  for (let k = 1; k <= 12; k++) {
+    const id = k * 3, n = 8000 + k * 2000, re = k === 1 ? 0 : prev, d = n - re, p = 'slot update_slots: id 0 | task ' + id + ' | ';
+    if (k === 1) L('slot get_availabl: id 0 | task -1 | selected slot by LRU, t_last = -1', 1000);
+    else L('slot get_availabl: id 0 | task -1 | checking sim = 0.9' + (70 + k) + ' (' + re + '/' + n + ')', 1000);
     L('slot launch_slot_: id 0 | task ' + id + ' | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = ' + n);
-    if (k % 4 === 3) L(p + 'restored context checkpoint (pos_min = 0, pos_max = ' + (re - 1) + ', n_tokens = ' + re + ', size = 149.626 MiB)');
+    if (k % 3 === 0) L(p + 'restored context checkpoint (pos_min = 0, pos_max = ' + (re - 1) + ', n_tokens = ' + re + ', size = 210.5 MiB)');
     else L(p + 'cached n_tokens = ' + re + ', memory_seq_rm [0, end)');
     L(p + 'prompt processing progress, n_tokens = ' + (re + (d >> 1)) + ', batch.n_tokens = 2048, progress = 0.5');
-    L(p + 'prompt processing done, n_tokens = ' + n, 900);
-    L('slot print_timing: id 0 | task ' + id + ' | prompt eval time = ' + Math.round(d / 1.3) + '.0 ms / ' + d + ' tokens ( 0.8 ms per token, 1300.0 tokens per second)');
-    L(p + 'n_gen = 80, tg = 61.' + k + ' t/s', 1200); L(p + 'n_gen = 190, tg = 62.' + k + ' t/s', 1800);
-    L(p + 'created context checkpoint ' + Math.min(k, 8) + ' of 8 (pos_min = 0, pos_max = ' + (n + 249) + ', n_tokens = ' + (n + 250) + ', size = 149.626 MiB)');
-    L('slot print_timing: id 0 | task ' + id + ' | eval time = 4100.0 ms / 250 tokens ( 16.4 ms per token, 61.' + k + ' tokens per second)', 300);
-    L('slot print_timing: id 0 | task ' + id + ' | draft acceptance rate = 0.7' + k + ' ( 150 accepted / 210 generated)');
-    prev = n + 250;
+    L(p + 'prompt processing done, n_tokens = ' + n, 800);
+    L('slot print_timing: id 0 | task ' + id + ' | prompt eval time = ' + Math.round(d / 1.5) + '.0 ms / ' + d + ' tokens ( 0.7 ms per token, 1420.0 tokens per second)');
+    L(p + 'n_gen = 120, tg = 58.' + k + ' t/s', 1000); L(p + 'n_gen = 280, tg = 60.' + k + ' t/s', 1500);
+    L(p + 'created context checkpoint ' + Math.min(k, 16) + ' of 32 (pos_min = 0, pos_max = ' + (n + 279) + ', n_tokens = ' + (n + 280) + ', size = 215.2 MiB)');
+    L('slot print_timing: id 0 | task ' + id + ' | eval time = 4600.0 ms / 280 tokens ( 16.4 ms per token, 60.' + k + ' tokens per second)', 200);
+    L('slot print_timing: id 0 | task ' + id + ' | draft acceptance rate = 0.78 ( 218 accepted / 280 generated)');
+    prev = n + 280;
   }
   return o;
 }
 
-/* ---------- запуск ---------- */
+/* ЗАПУСК */
 (async function boot() {
   try {
     const r = await realFetch(WWW_URL, { cache: 'no-store' });
     if (!r.ok) throw new Error(WWW_URL + ': HTTP ' + r.status);
     const src = (await r.text()).replace(/^#!.*\n/, '');
-    // www.js исполняется как есть; в конец добавлен возврат внутренностей движка
     srv = new Function('require', 'process', 'Buffer', 'fetch',
       src + '\n;return {state,resetAll,goLive,playerFinish,updatePlayerState,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
   } catch (e) {
-    $('hint').textContent = 'Ошибка загрузки www.js: ' + e.message; console.error(e); return;
+    $('hint').textContent = 'Ошибка загрузки www.js: ' + e.message; return;
   }
+
   try {
     const r = await realFetch(LOG_URL, { cache: 'no-store' });
     if (!r.ok) throw 0;
     const l = (await r.text()).split('\n').filter(Boolean);
     if (!l.some(x => tsOf(x) !== null)) throw 0;
     DEMO = l;
-  } catch (_) { DEMO = sample(); $('note').textContent = '⚠ ' + LOG_URL + ' не найден — встроенный пример'; }
-  enterLog();   // режим по умолчанию — ЛОГ
+  } catch (_) { 
+    DEMO = sample(); 
+  }
+
+  // ЗАПУСК LIVE DEMO ПО УМОЛЧАНИЮ!
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
+  setTimeout(startDemo, 300);
 })();
+
+// ЗВЕЗДЫ GITHUB
+fetch('https://api.github.com/repos/thisisspartan/llama-log-observability')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => { if (d && d.stargazers_count !== undefined) $('gh-stars').textContent = d.stargazers_count; })
+  .catch(() => {});
 </script>
 </body>
 </html>
