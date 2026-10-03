@@ -165,7 +165,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
   font-size: 11px;
 }
 #hint { color: var(--dim); }
-#note { color: var(--warn); margin-left: 6px; }
+#note { color: var(--dim); margin-left: 6px; font-size: 10px; }
 
 #app { flex: 1; width: 100%; border: 0; min-height: 0; }
 </style>
@@ -219,7 +219,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
   <!-- ПРАВО: СТАТУСНАЯ СТРОКА -->
   <div class="bar-info">
-    <span id="hint">загрузка движка…</span>
+    <span id="hint">загрузка…</span>
     <span id="note"></span>
   </div>
 </div>
@@ -228,8 +228,16 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 
 <script>
 'use strict';
-const WWW_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/www.js?v=' + Date.now();
-const LOG_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/demo.log?v=' + Date.now();
+/* КАСКАДНЫЕ ПУТИ:
+   1. Сначала тянем из репозитория llama-log-observability
+   2. Если нет — тянем локальный файл рядом с index.html
+   3. Если нет — используем встроенный образец */
+const REMOTE_WWW = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/www.js?v=' + Date.now();
+const LOCAL_WWW = 'www.js?v=' + Date.now();
+
+const REMOTE_LOG = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/main/demo.log?v=' + Date.now();
+const LOCAL_LOG = 'demo.log?v=' + Date.now();
+
 const MAX_GAP = 2500;
 const $ = id => document.getElementById(id);
 const realFetch = window.fetch.bind(window);
@@ -285,7 +293,7 @@ window.__SRV = {
   }
 };
 
-/* ПРЯЧЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME ЧЕРЕЗ ИНЖЕКТ CSS */
+/* СКРЫВАЕМ ДУБЛИРУЮЩИЙ ТУЛБАР ВНУТРИ IFRAME */
 const IFRAME_SHIM = '<style>.ctl-bar{display:none !important;}</style>' +
   '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
   'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
@@ -298,12 +306,12 @@ function setModeUI(isLive, label) {
   $('hint').textContent = label;
 }
 
-// РЕЖИМ 1: LIVE DEMO (ПО УМОЛЧАНИЮ)
+// 1. LIVE DEMO (ПО УМОЛЧАНИЮ)
 function startDemo() {
   const tok = ++feedTok;
   liveDemoPaused = false;
   $('btnPlay').textContent = '⏸';
-  setModeUI(true, 'Режим: LIVE DEMO (генерация живого потока)');
+  setModeUI(true, '● LIVE DEMO (поток инференса)');
   srv.goLive();
   let i = 0;
   (function step() {
@@ -317,16 +325,16 @@ function startDemo() {
   })();
 }
 
-// РЕЖИМ 2: СВОЙ ЛОГ ИЗ ФАЙЛА
+// 2. СВОЙ ЛОГ ИЗ ФАЙЛА
 function enterLog(customName) {
   feedTok++;
   liveDemoPaused = false;
   srv.playerFinish(true); srv.resetAll();
   srv.state.mode = 'PLAY'; srv.state.serverOnline = true; srv.updatePlayerState();
-  setModeUI(false, customName ? 'Файл: ' + customName : 'Режим: ФАЙЛ (прикрепите .log через кнопку «Лог»)');
+  setModeUI(false, customName ? 'Файл: ' + customName : 'Режим: ФАЙЛ (прикрепите .log кнопкой «Лог»)');
 }
 
-/* ---------- ПРИВЯЗКА КНОПОК ПУЛЬТА ---------- */
+/* ---------- КНОПКИ ПУЛЬТА ---------- */
 $('mLive').onclick = startDemo;
 $('mLog').onclick = () => enterLog();
 
@@ -371,7 +379,7 @@ $('fInput').onchange = (e) => {
         enterLog(f.name);
         $('btnPlay').textContent = '⏸';
       } else {
-        alert('Ошибка формата лога. Нужны строки с метками времени [ISO].');
+        alert('Ошибка формата лога. Нужны строки [ISO].');
       }
     });
   };
@@ -384,7 +392,7 @@ $('btnClear').onclick = () => {
   call('/api/clear', { method: 'POST' });
 };
 
-/* СТРОКИ ПРИМЕРА ДЛЯ LIVE DEMO */
+/* ВШИТЫЙ ОБРАЗЕЦ ИНФЕРЕНСА НА СЛУЧАЙ ОТСУТСТВИЯ ФАЙЛОВ */
 function sample() {
   const o = []; let t = Date.parse('2026-10-03T10:00:00Z');
   const L = (s, d) => { t += d || 200; o.push('[' + new Date(t).toISOString() + '] ' + s); };
@@ -409,31 +417,56 @@ function sample() {
   return o;
 }
 
-/* ЗАПУСК */
+/* ЗАПУСК: КАСКАДНАЯ ЗАГРУЗКА WWW.JS И DEMO.LOG */
 (async function boot() {
+  // 1. Загрузка www.js (сначала удалённый, затем локальный)
+  let src = '';
   try {
-    const r = await realFetch(WWW_URL, { cache: 'no-store' });
-    if (!r.ok) throw new Error(WWW_URL + ': HTTP ' + r.status);
-    const src = (await r.text()).replace(/^#!.*\n/, '');
-    srv = new Function('require', 'process', 'Buffer', 'fetch',
-      src + '\n;return {state,resetAll,goLive,playerFinish,updatePlayerState,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
-  } catch (e) {
-    $('hint').textContent = 'Ошибка загрузки www.js: ' + e.message; return;
+    const r = await realFetch(REMOTE_WWW, { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    src = (await r.text()).replace(/^#!.*\n/, '');
+  } catch (_) {
+    try {
+      const r2 = await realFetch(LOCAL_WWW, { cache: 'no-store' });
+      if (!r2.ok) throw 0;
+      src = (await r2.text()).replace(/^#!.*\n/, '');
+    } catch (err) {
+      $('hint').textContent = 'Ошибка загрузки www.js'; return;
+    }
   }
 
+  srv = new Function('require', 'process', 'Buffer', 'fetch',
+    src + '\n;return {state,resetAll,goLive,playerFinish,updatePlayerState,HTML_PAGE};')(nodeRequire, nodeProcess, nodeBuffer, engFetch);
+
+  // 2. Каскадная загрузка demo.log:
+  // [Удалённый репо] -> [Локальный demo.log] -> [Вшитый sample()]
+  let logLabel = '';
   try {
-    const r = await realFetch(LOG_URL, { cache: 'no-store' });
+    const r = await realFetch(REMOTE_LOG, { cache: 'no-store' });
     if (!r.ok) throw 0;
     const l = (await r.text()).split('\n').filter(Boolean);
     if (!l.some(x => tsOf(x) !== null)) throw 0;
     DEMO = l;
-  } catch (_) { 
-    DEMO = sample(); 
+    logLabel = '[лог из llama-log-observability]';
+  } catch (_) {
+    try {
+      const r2 = await realFetch(LOCAL_LOG, { cache: 'no-store' });
+      if (!r2.ok) throw 0;
+      const l2 = (await r2.text()).split('\n').filter(Boolean);
+      if (!l2.some(x => tsOf(x) !== null)) throw 0;
+      DEMO = l2;
+      logLabel = '[локальный demo.log]';
+    } catch (_) {
+      DEMO = sample();
+      logLabel = '[встроенный демо-поток]';
+    }
   }
 
-  // ЗАПУСК LIVE DEMO ПО УМОЛЧАНИЮ!
+  $('note').textContent = logLabel;
+
+  // 3. Запуск отображения
   $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
-  setTimeout(startDemo, 300);
+  setTimeout(startDemo, 250);
 })();
 
 // ЗВЕЗДЫ GITHUB
