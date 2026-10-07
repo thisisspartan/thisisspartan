@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>llama.cpp Log Monitor</title>
+<style>
+:root {
+  --bg: #06090e;
+  --panel: #0d131d;
+  --border: #1a2436;
+  --text: #f1f5f9;
+  --dim: #64748b;
+  --input: #38bdf8;
+  --reuse: #22c55e;
+  --warn: #eab308;
+  --red: #ef4444;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,monospace;display:flex;flex-direction:column;overflow:hidden}
+
+/* ONE CLEAN LINE: 38px */
+#bar {
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 1. BRAND ON THE LEFT */
+.bar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.brand-title { font-size: 11px; font-weight: 800; color: var(--input); letter-spacing: 0.5px; }
+.brand-sub { font-size: 9px; font-weight: 700; color: var(--dim); }
+
+.gh-star-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 10.5px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+.gh-star-btn:hover { border-color: var(--warn); color: #fff; }
+.gh-star-btn svg { color: var(--warn); flex-shrink: 0; }
+.gh-star-count { background: rgba(234,179,8,0.15); color: var(--warn); padding: 1px 4px; border-radius: 3px; font-size: 9px; }
+
+.bar-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* 2. SOURCE + CONTROLS */
+.bar-center-unit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mode-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #080d15;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 3px;
+}
+.m-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  font: bold 10px inherit;
+  border-radius: 3px;
+  padding: 2px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.m-btn:hover { color: var(--text); }
+
+/* Active modes WITHOUT flicker */
+.m-btn.on-live {
+  background: rgba(34,197,94,0.12);
+  border-color: rgba(34,197,94,0.5);
+  color: var(--reuse);
+}
+.m-btn.on-cloud {
+  background: rgba(234,179,8,0.12);
+  border-color: rgba(234,179,8,0.5);
+  color: var(--warn);
+}
+.m-btn.on-file {
+  background: rgba(56,189,248,0.12);
+  border-color: rgba(56,189,248,0.5);
+  color: var(--input);
+}
+
+.unit-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+  margin: 0 2px;
+}
+
+/* CONTROLS WITH STEP-NAVIGATION ARROWS */
+.ctl-group {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.c-btn {
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: bold 10.5px inherit;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  min-width: 24px;
+  height: 22px;
+}
+.c-btn:hover { border-color: var(--input); color: var(--input); }
+.c-btn-primary { color: var(--input); font-size: 11px; }
+.c-btn-danger:hover { border-color: var(--red); color: var(--red); }
+.c-select {
+  background: #151e2b;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font: bold 10px inherit;
+  border-radius: 4px;
+  padding: 2px 4px;
+  cursor: pointer;
+  height: 22px;
+  margin-left: 2px;
+}
+
+/* 3. RIGHT SIDE: WARNING ONLY (IF THE CLOUD LOG WAS NOT FOUND OR AN ERROR OCCURRED) */
+.bar-status {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.status-pill-warn {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(234,179,8,0.15);
+  color: var(--warn);
+  border: 1px solid var(--warn);
+  cursor: help;
+}
+
+#app { flex: 1; width: 100%; border: 0; min-height: 0; }
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <!-- 1. BRAND -->
+  <div class="bar-brand">
+    <span class="brand-title">LLAMA.CPP LOG MONITOR</span>
+    <span class="brand-sub">EDUCATIONAL MONITOR (ONE SLOT ONLY!)</span>
+    <a href="https://github.com/thisisspartan/llama-log-observability" target="_blank" rel="noopener" class="gh-star-btn" title="Star on GitHub">
+      <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>
+      <span>GitHub</span>
+      <span id="gh-stars" class="gh-star-count">★</span>
+    </a>
+  </div>
+
+  <div class="bar-sep"></div>
+
+  <!-- 2. SOURCE + CONTROLS WITH STEP-NAVIGATION ARROWS -->
+  <div class="bar-center-unit">
+    <div class="mode-group">
+      <button id="mDemo" class="m-btn on-live" title="Live generation simulation">
+        ● LIVE DEMO
+      </button>
+      <button id="mCloud" class="m-btn" title="Log from GitHub (demo.log)">
+        ☁ GITHUB LOG
+      </button>
+      <label class="m-btn" style="cursor:pointer;" title="Open your own .log file from the computer">
+        📁 YOUR FILE
+        <input type="file" id="fInput" accept=".log,.txt" style="display:none">
+      </label>
+    </div>
+
+    <div class="unit-sep"></div>
+
+    <div class="ctl-group">
+      <button id="btnRestart" class="c-btn" title="Replay from the very start">↺</button>
+      <!-- STEP BACK TO THE PREVIOUS REQUEST -->
+      <button id="btnPrev" class="c-btn" title="Previous request (step back)">⏮</button>
+      <button id="btnPlay" class="c-btn c-btn-primary" title="Pause / Start">⏸</button>
+      <!-- STEP FORWARD TO THE NEXT REQUEST -->
+      <button id="btnNext" class="c-btn" title="Next request (step forward)">⏭</button>
+      <select id="selSpeed" class="c-select" title="Playback speed">
+        <option value="1">1x</option>
+        <option value="3" selected>3x</option>
+        <option value="10">10x</option>
+        <option value="50">50x</option>
+      </select>
+      <button id="btnClear" class="c-btn c-btn-danger" title="Clear log and history">🗑</button>
+    </div>
+  </div>
+
+  <div class="bar-sep"></div>
+
+  <!-- 3. WARNING / ERROR BADGE -->
+  <div class="bar-status">
+    <span id="status-warn" class="status-pill-warn" style="display:none;" title=""></span>
+  </div>
+</div>
+
+<!-- iframe without sandbox: srcdoc is same-origin, but parent.__SRV needs access to parent;
+     content is only HTML_PAGE from the verified (SHA-256) www.js -->
+<iframe id="app"></iframe>
+
+<script>
+'use strict';
+// #13: reproducible source of www.js — immutable commit (not mutable main + ?Date.now()).
+// SHA-256 of the fetched text is checked BEFORE new Function; mismatch — code is not executed.
+const WWW_COMMIT = '020e9009ef61bce12b6c11d41466fffe93a98f3d';
+const WWW_SHA256 = 'ef56056e3dea199bebb29d4f7a814d67cea971ea7dfac40363d8a6bb5b4c053c';
+const REMOTE_WWW = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/' + WWW_COMMIT + '/www.js';
+// LOCAL_WWW — explicit local/development fallback only (localhost); NOT used on Pages
+const LOCAL_WWW = 'www.js';
+// demo.log and www.js now live in the same single (squashed) commit — one immutable SHA
+const DEMO_COMMIT = '020e9009ef61bce12b6c11d41466fffe93a98f3d';
+const CLOUD_LOG_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/' + DEMO_COMMIT + '/demo.log';
+// #3: LOCAL_WWW — localhost/dev only; on Pages (https + github.io) the fallback is disabled
+const IS_DEV = (typeof location !== 'undefined') && location.protocol === 'http:' &&
+  (location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+
+const MAX_GAP = 2500;
+const $ = id => document.getElementById(id);
+const realFetch = window.fetch.bind(window);
+const tsOf = l => { const m = l && l.match(/^\[([^\]]+)\] /); const t = m ? Date.parse(m[1]) : NaN; return isNaN(t) ? null : t; };
+const clean = l => l.replace(/^\[[^\]]+\] /, '');
+// #13: SHA-256 of text (WebCrypto; Pages — HTTPS, secure context)
+async function sha256hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+let handler = null, liveCb = null, srv = null, DEMO = [], feedTok = 0;
+let liveDemoPaused = false;
+let currentSpeed = 3;
+let demoIdx = 0;
+
+/* NODE.JS SHIMS (point 4: pass --speed 3 and --max-gap 5 in argv) */
+const mkRes = (status, text) => ({ ok: status >= 200 && status < 300, status, text: async () => text, json: async () => JSON.parse(text) });
+const nodeShim = {
+  http: { createServer(h) { handler = h; return { listen(p, host, cb) { if (cb) cb(); }, on() {} }; } },
+  readline: { createInterface() { return { on(ev, cb) { if (ev === 'line') liveCb = cb; } }; } },
+  fs: { createWriteStream: () => ({ write() {}, on() {}, end() {} }), existsSync: () => false, statSync: () => ({ size: 0 }), renameSync: () => {}, stat: (f, cb) => cb(new Error('n/a')), readFileSync: () => '' },
+  path: { join: (...a) => a.join('/') }
+};
+const nodeRequire = n => nodeShim[n];
+const nodeProcess = { argv: ['node', 'www.js', '--speed', '3', '--max-gap', '5'], env: { HOME: '.' }, stdin: {}, stdout: { write() {} }, exit() {} };
+const nodeBuffer = { byteLength: s => new TextEncoder().encode(s).length, alloc: n => new Uint8Array(n) };
+const engFetch = (u) => {
+  u = String(u);
+  if (u.endsWith('/slots') && srv) {
+    const s = srv.state;
+    return Promise.resolve(mkRes(200, JSON.stringify([{ is_processing: s.is_processing, n_ctx: s.n_ctx || 0, n_prompt_tokens: s.n_prompt_tokens || 0 }])));
+  }
+  return Promise.resolve(mkRes(404, ''));
+};
+
+/* VIRTUAL ROUTER */
+function call(url, opt) {
+  return new Promise(resolve => {
+    opt = opt || {};
+    const method = (opt.method || 'GET').toUpperCase(), h = {};
+    const req = { url, method, setEncoding() {}, on(e, f) { (h[e] = h[e] || []).push(f); return req; } };
+    let status = 200; const chunks = [];
+    const res = { writeHead(s) { status = s; }, write(c) { chunks.push(c); }, flushHeaders() {},
+      end(c) { if (c != null) chunks.push(c); resolve(mkRes(status, chunks.join(''))); } };
+    handler(req, res);
+    if (method === 'POST') setTimeout(() => { (h.data || []).forEach(f => f(String(opt.body || ''))); (h.end || []).forEach(f => f()); }, 0);
+  });
+}
+window.__SRV = {
+  fetch(u, o) {
+    o = o || {}; u = String(u);
+    if (!u.startsWith('/')) return realFetch(u, o);
+    return call(u, o);
+  },
+  sse(u, cb) {
+    handler({ url: u, method: 'GET', on() {} },
+      { writeHead() {}, flushHeaders() {}, end() {}, write(c) { c = String(c); if (c.startsWith('data: ')) cb(c.slice(6).trim()); } });
+  }
+};
+
+/* HIDE THE OLD FOOTER/TOOLBAR AND THE NEW PLAYER TOOLBAR IN THE IFRAME (controls live in the parent bar) */
+const IFRAME_SHIM = '<style>.ctl-bar, .bottom-grid, .bottom-panel, .player-toolbar { display:none !important; }</style>' +
+  '<script>(function(){var P=parent.__SRV;window.fetch=function(u,o){return P.fetch(u,o)};' +
+  'window.EventSource=function(u){var es=this;es.onopen=es.onmessage=es.onerror=null;' +
+  'setTimeout(function(){P.sse(u,function(m){if(es.onmessage)es.onmessage({data:m})});if(es.onopen)es.onopen()},0)};})();<\/script>';
+
+/* MODE TOGGLE */
+function setMode(mode, warnText, warnTooltip) {
+  $('mDemo').className = 'm-btn ' + (mode === 'demo' ? 'on-live' : '');
+  $('mCloud').className = 'm-btn ' + (mode === 'cloud' ? 'on-cloud' : '');
+  $('fInput').parentElement.className = 'm-btn ' + (mode === 'file' ? 'on-file' : '');
+  
+  const w = $('status-warn');
+  if (warnText) {
+    w.textContent = warnText;
+    w.title = warnTooltip || '';
+    w.style.display = 'inline-block';
+  } else {
+    w.style.display = 'none';
+  }
+}
+
+/* Point 6: auto-sync the ⏸/▶ icon with the real player state */
+setInterval(() => {
+  if (!srv || !srv.state) return;
+  if (srv.state.mode === 'LIVE') {
+    $('btnPlay').textContent = liveDemoPaused ? '▶' : '⏸';
+  } else if (srv.state.player) {
+    const isStopped = srv.state.player.paused || srv.state.player.finished;
+    $('btnPlay').textContent = isStopped ? '▶' : '⏸';
+  }
+}, 200);
+
+// 1. LIVE DEMO
+function runLiveDemo() {
+  const tok = ++feedTok;
+  liveDemoPaused = false;
+  setMode('demo');
+  srv.goLive();
+  demoIdx = 0;
+  const lines = DEMO.length > 0 ? DEMO : sample();
+  (function step() {
+    if (tok !== feedTok || srv.state.mode !== 'LIVE') return;
+    if (liveDemoPaused) { setTimeout(step, 150); return; }
+    if (demoIdx >= lines.length) { setTimeout(() => { if (tok === feedTok && srv.state.mode === 'LIVE') runLiveDemo(); }, 3000); return; }
+    const l = lines[demoIdx++]; liveCb(clean(l));
+    const a = tsOf(l), b = tsOf(lines[demoIdx]);
+    const delay = (a !== null && b !== null) ? Math.min(Math.max(0, b - a), MAX_GAP) : 200;
+    setTimeout(step, delay / currentSpeed);
+  })();
+}
+
+// 2. CLOUD LOG FROM GITHUB (points 3 and 4: check lr.ok and apply the speed)
+async function runCloudLog() {
+  if (!srv) return; // boot did not pass — fail-closed, no engine
+  feedTok++;
+  $('status-warn').style.display = 'none';
+
+  try {
+    const res = await realFetch(CLOUD_LOG_URL, { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const lines = text.split('\n').filter(Boolean);
+    if (!lines.some(x => tsOf(x) !== null)) throw new Error('no [ISO] timestamp labels');
+
+    const lr = await call('/api/load-log', { method: 'POST', body: text });
+    if (!lr.ok) throw new Error('load-log HTTP ' + lr.status);
+
+    setMode('cloud');
+    if (srv.playerSetSpeed) srv.playerSetSpeed(currentSpeed);
+  } catch (err) {
+    srv.playerFinish(true); srv.resetAll();
+    const cleanUrl = CLOUD_LOG_URL.split('?')[0];
+    // real error, no masking of 404 as "empty demo"
+    const msg = '⚠ demo.log: ' + err.message;
+    setMode('cloud', msg, 'Load error: ' + cleanUrl + ' (' + err.message + ')');
+  }
+}
+
+// 3. USER-INITIATED LOCAL FILE LOAD
+$('fInput').onchange = (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  // #10: client-side 2 MB limit BEFORE FileReader/send (server: 413 at MAX_LOG)
+  if (f.size > 2 * 1024 * 1024) {
+    warnOnly('⚠ file larger than 2 MB',
+      'Load limit: 2 MB, file: ' + (f.size / 1048576).toFixed(2) + ' MB');
+    e.target.value = '';
+    return;
+  }
+  const r = new FileReader();
+  r.onload = async (evt) => {
+    let text = String(evt.target.result || '');
+    feedTok++;
+    liveDemoPaused = false;
+
+    let lines = text.split('\n').filter(Boolean);
+    const hasTs = lines.some(l => {
+      const m = l.match(/^\[([^\]]+)\] /);
+      return m && !Number.isNaN(Date.parse(m[1]));
+    });
+
+    if (!hasTs) {
+      let fakeTime = (performance.timeOrigin + performance.now()) - (lines.length * 150);
+      lines = lines.map((l, i) => `[${new Date(fakeTime + i * 150).toISOString()}] ${l}`);
+      text = lines.join('\n');
+    }
+
+    const res = await call('/api/load-log', { method: 'POST', body: text });
+    if (res.ok) {
+      setMode('file');
+      if (srv.playerSetSpeed) srv.playerSetSpeed(currentSpeed);
+    } else {
+      alert('Could not process the log (HTTP ' + res.status + ').');
+    }
+  };
+  r.readAsText(f);
+  e.target.value = '';
+};
+
+/* Points 1 and 2: exact search for the task end (not confused with prompt eval time) and anchor re-count via rebase() */
+function nextBoundary(lines, from) {
+  let i = from;
+  while (i < lines.length && !(lines[i].includes('eval time =') && !lines[i].includes('prompt eval'))) i++;
+  i++; // the eval time line itself
+  // Capture the tail of the current task (MTP, speculation, slot release)
+  while (i < lines.length && (
+    lines[i].includes('total time =') ||
+    lines[i].includes('graphs reused =') ||
+    lines[i].includes('draft acceptance') ||
+    lines[i].includes('acc per pos =') ||
+    lines[i].includes('statistics') ||
+    lines[i].includes('stop processing:')
+  )) {
+    i++;
+  }
+  return Math.min(i, lines.length);
+}
+
+function rebase() {
+  if (!srv || !srv.player) return;
+  const p = srv.player, L = p.lines;
+  for (let i = p.idx - 1; i >= 0; i--) {
+    const t = tsOf(L[i]);
+    if (t !== null) {
+      p.lastT = p.lastDoneT = p.anchorLog = t;
+      break;
+    }
+  }
+  p.anchorWall = p.paused ? p.pausedAt : performance.timeOrigin + performance.now();
+}
+
+function pauseAll() {
+  liveDemoPaused = true;
+  if (srv && srv.playerPause) srv.playerPause();
+}
+
+// ⏭ NEXT REQUEST (STEP FORWARD)
+$('btnNext').onclick = () => {
+  pauseAll();
+  if (srv.state.mode === 'LIVE') {
+    const lines = DEMO.length > 0 ? DEMO : sample();
+    if (demoIdx >= lines.length) return;
+    const to = nextBoundary(lines, demoIdx);
+    while (demoIdx < to) liveCb(clean(lines[demoIdx++]));
+  } else if (srv.player && srv.player.lines) {
+    const lines = srv.player.lines;
+    if (srv.player.idx >= lines.length) return;
+    const to = nextBoundary(lines, srv.player.idx);
+    while (srv.player.idx < to) srv.feedLogLine(lines[srv.player.idx++]);
+    rebase();
+    srv.updatePlayerState();
+  }
+};
+
+// #11: btnPrev — expensive rewind (resetAll + replay of the whole prefix) is bounded:
+// async chunks (the UI does not hang), protection against concurrent rewinds,
+// hard ceiling on the line count.
+let prevBusy = false;
+const MAX_PREV_LINES = 200000;
+const PREV_CHUNK = 2000;
+function warnOnly(text, tooltip) {
+  const w = $('status-warn');
+  w.textContent = text; w.title = tooltip || ''; w.style.display = 'inline-block';
+}
+function prevReplay(lines, target) {
+  if (prevBusy) return;
+  if (target > MAX_PREV_LINES) {
+    warnOnly('⚠ log too big for one step back',
+      'Rewind of ' + target.toLocaleString() + ' lines > limit ' + MAX_PREV_LINES.toLocaleString());
+    return;
+  }
+  prevBusy = true;
+  srv.resetAll();
+  let k = 0;
+  (function step() {
+    const end = Math.min(target, k + PREV_CHUNK);
+    while (k < end) srv.feedLogLine(lines[k++]);
+    if (k < target) setTimeout(step, 0);
+    else {
+      srv.player.idx = k;
+      srv.player.finished = false;
+      rebase();
+      srv.updatePlayerState();
+      prevBusy = false;
+    }
+  })();
+}
+
+// ⏮ PREVIOUS REQUEST (STEP BACK)
+$('btnPrev').onclick = () => {
+  pauseAll();
+  if (srv.state.mode === 'LIVE') {
+    const lines = DEMO.length > 0 ? DEMO : sample();
+    if (demoIdx <= 1) return;
+    let prevI = Math.max(0, demoIdx - 2);
+    while (prevI > 0 && !(lines[prevI].includes('eval time =') && !lines[prevI].includes('prompt eval'))) prevI--;
+    let target = prevI > 0 ? nextBoundary(lines, prevI) : 0;
+    if (target >= demoIdx) {
+      prevI = Math.max(0, prevI - 2);
+      while (prevI > 0 && !(lines[prevI].includes('eval time =') && !lines[prevI].includes('prompt eval'))) prevI--;
+      target = prevI > 0 ? nextBoundary(lines, prevI) : 0;
+    }
+    srv.goLive();
+    let k = 0;
+    while (k < target && k < lines.length) liveCb(clean(lines[k++]));
+    demoIdx = k;
+  } else if (srv.player && srv.player.lines) {
+    const lines = srv.player.lines;
+    if (srv.player.idx <= 1) return;
+    let prevIdx = Math.max(0, srv.player.idx - 2);
+    while (prevIdx > 0 && !(lines[prevIdx].includes('eval time =') && !lines[prevIdx].includes('prompt eval'))) prevIdx--;
+    let target = prevIdx > 0 ? nextBoundary(lines, prevIdx) : 0;
+    if (target >= srv.player.idx) {
+      prevIdx = Math.max(0, prevIdx - 2);
+      while (prevIdx > 0 && !(lines[prevIdx].includes('eval time =') && !lines[prevIdx].includes('prompt eval'))) prevIdx--;
+      target = prevIdx > 0 ? nextBoundary(lines, prevIdx) : 0;
+    }
+    prevReplay(lines, target);
+  }
+};
+
+/* BUTTONS */
+$('mDemo').onclick = runLiveDemo;
+$('mCloud').onclick = runCloudLog;
+
+// Play / Pause
+$('btnPlay').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    liveDemoPaused = !liveDemoPaused;
+  } else if (srv.state.player) {
+    if (srv.state.player.finished) {
+      if (srv.playerRestart) srv.playerRestart();
+    } else if (srv.state.player.paused) {
+      if (srv.playerResume) srv.playerResume();
+    } else {
+      if (srv.playerPause) srv.playerPause();
+    }
+  }
+};
+
+// Replay from the start
+$('btnRestart').onclick = () => {
+  if (srv.state.mode === 'LIVE') {
+    runLiveDemo();
+  } else if (srv.playerRestart) {
+    srv.playerRestart();
+  }
+};
+
+// Speed
+$('selSpeed').onchange = (e) => {
+  currentSpeed = parseFloat(e.target.value) || 1;
+  if (srv.state.mode !== 'LIVE' && srv.playerSetSpeed) {
+    srv.playerSetSpeed(currentSpeed);
+  }
+};
+
+// Clear
+$('btnClear').onclick = () => {
+  call('/api/clear', { method: 'POST' });
+};
+
+/* SAMPLE INFERENCE TRACE FOR THE SIMULATION */
+function sample() {
+  const o = []; let t = Date.parse('2026-10-03T10:00:00Z');
+  const L = (s, d) => { t += d || 200; o.push('[' + new Date(t).toISOString() + '] ' + s); };
+  L("srv load_model: initializing, n_slots = 1, n_ctx_slot = 124672, kv_unified = 'false'");
+  let prev = 0;
+  for (let k = 1; k <= 12; k++) {
+    const id = k * 3, n = 8000 + k * 2000, re = k === 1 ? 0 : prev, d = n - re, p = 'slot update_slots: id 0 | task ' + id + ' | ';
+    if (k === 1) L('slot get_availabl: id 0 | task -1 | selected slot by LRU, t_last = -1', 1000);
+    else L('slot get_availabl: id 0 | task -1 | checking sim = 0.9' + (70 + k) + ' (' + re + '/' + n + ')', 1000);
+    L('slot launch_slot_: id 0 | task ' + id + ' | new prompt, n_ctx_slot = 124672, n_keep = 0, task.n_tokens = ' + n);
+    if (k % 3 === 0) L(p + 'restored context checkpoint (pos_min = 0, pos_max = ' + (re - 1) + ', n_tokens = ' + re + ', size = 210.5 MiB)');
+    else L(p + 'cached n_tokens = ' + re + ', memory_seq_rm [0, end)');
+    L(p + 'prompt processing progress, n_tokens = ' + (re + (d >> 1)) + ', batch.n_tokens = 2048, progress = 0.5');
+    L(p + 'prompt processing done, n_tokens = ' + n, 800);
+    L('slot print_timing: id 0 | task ' + id + ' | prompt eval time = ' + Math.round(d / 1.5) + '.0 ms / ' + d + ' tokens ( 0.7 ms per token, 1420.0 tokens per second)');
+    L(p + 'n_gen = 120, tg = 58.' + k + ' t/s', 1000); L(p + 'n_gen = 280, tg = 60.' + k + ' t/s', 1500);
+    L(p + 'created context checkpoint ' + Math.min(k, 16) + ' of 32 (pos_min = 0, pos_max = ' + (n + 279) + ', n_tokens = ' + (n + 280) + ', size = 215.2 MiB)');
+    L('slot print_timing: id 0 | task ' + id + ' | eval time = 4600.0 ms / 280 tokens ( 16.4 ms per token, 60.' + k + ' tokens per second)', 200);
+    L('slot print_timing: id 0 | task ' + id + ' | draft acceptance rate = 0.78 ( 218 accepted / 280 generated)');
+    prev = n + 280;
+  }
+  return o;
+}
+
+/* BOOT (try/catch around new Function;
+   #13: SHA-256 of the fetched text is checked BEFORE new Function — mismatch, code not executed;
+   #6: the www.js virtual clock does not replace window.Date.now — shadow Date in parameters) */
+(async function boot() {
+  let src = '';
+  try {
+    const r = await realFetch(REMOTE_WWW, { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    src = await r.text();
+  } catch (_) {
+    // #3: production (Pages) — fail-closed, no silent switch to a local www.js
+    if (!IS_DEV) {
+      setMode('demo', '⚠ ERROR www.js',
+        'Could not load www.js by the pinned URL (production: fail-closed, local fallback disabled)');
+      return;
+    }
+    // localhost/dev: explicit local fallback (also passes the SHA-256 check)
+    try {
+      const r2 = await realFetch(LOCAL_WWW, { cache: 'no-store' });
+      if (!r2.ok) throw 0;
+      src = await r2.text();
+    } catch (err) {
+      setMode('demo', '⚠ ERROR www.js', 'Could not load www.js'); return;
+    }
+  }
+
+  let actual = '';
+  try { actual = await sha256hex(src); } catch (_) { actual = ''; }
+  if (actual !== WWW_SHA256) {
+    setMode('demo', '⚠ WWW.JS: SHA-256 MISMATCH',
+      'Expected ' + WWW_SHA256.slice(0, 16) + '… (commit ' + WWW_COMMIT.slice(0, 7) +
+      '), got ' + (actual || '<not computed>') + '… — code not executed');
+    return;
+  }
+
+  src = src.replace(/^#!.*\n/, '');
+
+  // #6: browser isolation — the www.js virtual clock (Date.now = ...) must NOT
+  // replace window.Date.now: pass a shadow Date into the new Function parameters
+  // (the parameter shadows the global). The parser sees virtual time, the browser realm stays clean.
+  const BrowserDate = function (...args) { return Reflect.construct(Date, args); };
+  BrowserDate.prototype = Date.prototype;
+  BrowserDate.now = Date.now.bind(Date);
+  BrowserDate.parse = Date.parse.bind(Date);
+
+  try {
+    srv = new Function('Date', 'require', 'process', 'Buffer', 'fetch',
+      src + '\n;return {state,resetAll,goLive,playerFinish,playerPause,playerResume,playerRestart,playerSetSpeed,updatePlayerState,feedLogLine,player,HTML_PAGE};')(BrowserDate, nodeRequire, nodeProcess, nodeBuffer, engFetch);
+  } catch (e) {
+    setMode('demo', '⚠ ERROR www.js', e.message);
+    console.error(e);
+    return;
+  }
+
+  DEMO = sample();
+  $('app').srcdoc = srv.HTML_PAGE.replace('<head>', '<head>' + IFRAME_SHIM);
+
+  setTimeout(runLiveDemo, 250);
+})();
+
+// GITHUB STARS
+fetch('https://api.github.com/repos/thisisspartan/llama-log-observability')
+  .then(r => r.ok ? r.json() : null)
+  .then(d => { if (d && d.stargazers_count !== undefined) $('gh-stars').textContent = d.stargazers_count; })
+  .catch(() => {});
+</script>
+</body>
+</html>
