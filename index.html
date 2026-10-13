@@ -303,7 +303,7 @@ function call(url, opt) {
   return new Promise(resolve => {
     opt = opt || {};
     const method = (opt.method || 'GET').toUpperCase(), h = {};
-    const req = { url, method, setEncoding() {}, on(e, f) { (h[e] = h[e] || []).push(f); return req; } };
+    const req = { url, method, headers: { host: 'localhost:3000' }, setEncoding() {}, on(e, f) { (h[e] = h[e] || []).push(f); return req; } };
     let status = 200; const chunks = [];
     const res = { writeHead(s) { status = s; }, write(c) { chunks.push(c); }, flushHeaders() {},
       end(c) { if (c != null) chunks.push(c); resolve(mkRes(status, chunks.join(''))); } };
@@ -318,7 +318,7 @@ window.__SRV = {
     return call(u, o);
   },
   sse(u, cb) {
-    handler({ url: u, method: 'GET', on() {} },
+    handler({ url: u, method: 'GET', headers: { host: 'localhost:3000' }, on() {} },
       { writeHead() {}, flushHeaders() {}, end() {}, write(c) { c = String(c); if (c.startsWith('data: ')) cb(c.slice(6).trim()); } });
   }
 };
