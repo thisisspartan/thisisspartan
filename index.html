@@ -248,13 +248,13 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:12px 
 'use strict';
 // #13: reproducible source of www.js — immutable commit (not mutable main + ?Date.now()).
 // SHA-256 of the fetched text is checked BEFORE new Function; mismatch — code is not executed.
-const WWW_COMMIT = '7da5c9996f8f40e2c6b8b118a8333c172bcf7274';
-const WWW_SHA256 = '3ead524841892c5082ddf54f63f6fd643301806019d495fd9e243333cedded17';
+const WWW_COMMIT = 'abd5646fc5ee028023963e1bec58abc3c7c9c4b0';
+const WWW_SHA256 = '024d8ad94acc61e1b5cc7a710786b9f5afeb15253ebedf551f51d8974747fd74';
 const REMOTE_WWW = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/' + WWW_COMMIT + '/www.js';
 // LOCAL_WWW — explicit local/development fallback only (localhost); NOT used on Pages
 const LOCAL_WWW = 'www.js';
 // demo.log and www.js now live in the same single (squashed) commit — one immutable SHA
-const DEMO_COMMIT = '7da5c9996f8f40e2c6b8b118a8333c172bcf7274';
+const DEMO_COMMIT = 'abd5646fc5ee028023963e1bec58abc3c7c9c4b0';
 const CLOUD_LOG_URL = 'https://raw.githubusercontent.com/thisisspartan/llama-log-observability/' + DEMO_COMMIT + '/demo.log';
 // #3: LOCAL_WWW — localhost/dev only; on Pages (https + github.io) the fallback is disabled
 const IS_DEV = (typeof location !== 'undefined') && location.protocol === 'http:' &&
