@@ -1,0 +1,29 @@
+# Static lock for the demo's virtual router (regression 2026-10-13: headerless
+# virtual requests + www.js Host gate = silently empty journal). node:test, zero deps.
+# Runner pinned to ubuntu-24.04 (ubuntu-latest moves to Ubuntu 26 on 2026-10-19).
+# Actions pinned by full commit SHA (tag-resolved), not by mutable tag.
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: "22"
+
+      - name: Run static locks (node --test, zero deps)
+        run: node --test tests/*.test.js
